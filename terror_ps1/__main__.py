@@ -12,8 +12,9 @@ prendem e fazem barulho, e ele ouve.
     pip install -r requirements.txt
     python -m terror_ps1
 
-Mouse olha, WASD anda (Q/E ou setas tambem giram), F ou botao direito liga/apaga a
-lanterna, ESPACO (ou botao esquerdo) forca a armadilha, F11 tela cheia, ESC sai.
+Mouse olha, WASD anda (Q/E ou setas tambem giram), SHIFT corre, CTRL ou C agacha, R
+prende a respiracao, F ou botao direito liga/apaga a lanterna, G (ou botao do meio) acende
+o sinalizador, ESPACO (ou botao esquerdo) forca a armadilha, F11 tela cheia, ESC sai.
 """
 from __future__ import annotations
 
@@ -42,6 +43,13 @@ def main() -> int:
     except Exception:  # noqa: BLE001 -- sem icone o jogo roda igual
         pass
     game_loop = build_game(carregar_config())
+    try:  # grilos, passos, respiracao e coracao tocam juntos: mais canais que os 8 de fabrica
+        import pygame
+
+        if pygame.mixer.get_init():
+            pygame.mixer.set_num_channels(32)
+    except Exception:  # noqa: BLE001 -- com 8 canais o jogo roda igual, so corta sons
+        pass
     try:
         game_loop.run()
     finally:

@@ -2,12 +2,42 @@
 
 Terror em primeira pessoa numa floresta low poly com cara de PlayStation 1. Ache os 7 amuletos e leve-os ao santuário do torii, ao norte, antes que o vulto chegue até você.
 
-- O vulto **só anda quando não está na luz** da lanterna.
-- A pilha acaba. Apagada, a lanterna recarrega devagar, e há pilhas pelo mapa.
-- Armadilhas de urso nas trilhas prendem você e fazem barulho, e **ele ouve**.
-- O guizo do amuleto mais perto toca do lado em que ele está.
+Sua irmã Ayame sumiu nesta floresta.
+
+- **A luz segura ele:** o vulto só anda quando não está no feixe. Mas a lanterna acesa se vê de longe, e encarar gasta a pilha mais rápido.
+- **Ele ouve:** correr, pisar em graveto, o tilintar dos amuletos no bolso e até a respiração ofegante dizem onde você está. Agachado e no escuro, você some. Dá para prender a respiração por alguns segundos.
+- **Ele tem ritmo:** a perseguição aperta até um pico, e então ele recua. A calma não dura.
+- **Ele aprende:** quem gira a lanterna em volta de si o tempo todo o ensina a esperar a luz falhar. E ela falha.
+- **A floresta mente:** quando você não está olhando, os jizos se viram para você, aparece um a mais, a árvore das fitas muda de lugar, as placas trocam de destino e surgem pegadas suas por onde você nunca andou. Às vezes o guizo que você ouve não é de amuleto nenhum.
+- **A floresta cala:** grilos, sapos e corujas param quando ele chega perto.
+- **Peso:** cada amuleto carregado deixa você mais lento e tilinta. Dá para deixá-los no altar e voltar.
+- **Esconderijos:** atrás da mesa da cabana, dentro do poço, na barraca caída. Não servem se ele te viu entrar, e ele vem conferir.
+- **Uma câmera com 6 fotos:** o flash cega ele por 3 segundos. Na foto aparece o que a floresta esconde.
+- **Ayame** aparece correndo ao longe nos momentos calmos. Às vezes leva a um omamori, às vezes a uma armadilha.
+- **A pequena:** depois do 5º omamori, outra coisa, que só anda quando a luz está nela.
+- **A noite piora:** a lua se põe, a neblina fecha, e no meio da noite chove, o que abafa os seus passos e os dele.
+- **Dois finais**, e depois deles **a noite seguinte**.
+
+### A segunda noite: os arrozais
+
+Campo aberto e alagado: diques de terra entre quadras de arroz cheias d'água e um canal fundo com uma ponte só. Na água se anda devagar e cada passo espirra. Aqui quem caça é **o Cego**: enorme, não liga para luz nenhuma, mas ouve tudo e corre para o som. Fique nos diques, ande devagar, esconda-se no feno do galpão ou embaixo da ponte, ou afunde no canal, onde o ar acaba no dobro da pressa.
+
+### A terceira noite: a aldeia vazia
+
+Ruas de terra, casas fechadas, lanternas de papel ainda acesas e bonecas nas varandas. Ayame anda por aqui, ou alguém igual a ela: **a Imitadora**. A verdadeira foge de você; a falsa aparece parada no seu caminho, chorando. Enquanto você olha, ela não se mexe; dê as costas com ela perto, e ela corre. Quem se esconde, ela esquece.
+
+### A quarta noite: o bambuzal
+
+Trilhas estreitas num bambuzal fechado. Fora delas, tocos de bambu cortados em ponta: quem corta caminho se corta, e sangra. Aqui quem caça é **o Farejador**: ele só segue o seu sangue, gota por gota, na ordem em que caiu. Pare de sangrar e ele se perde.
+
+Depois do bambuzal, as noites recomeçam **espelhadas**, com um jizo na entrada da floresta, e ele lembra do que você fez.
+- Bilhetes e nomes nos jizos contam o que aconteceu ali.
+
+Quer saber tudo antes de entrar? Leia o [diário de quem sobreviveu](docs/diario.html) (abra no navegador; o botão "apagar a luz" transforma o mouse em lanterna, e a "luz negra" revela o que foi escrito em tinta ultravioleta).
 
 ## Jogar
+
+O jogo abre num menu: **Continuar** retoma a campanha na noite em que você parou (o progresso fica salvo em `%APPDATA%\TerrorPS1`), **Nova campanha** começa da primeira noite. Na noite, ESC volta ao menu.
 
 Baixe o `TerrorPS1-windows.zip` da página de [Releases](https://github.com/EzioMilanoX/TerrorPS1/releases), extraia e abra `TerrorPS1/TerrorPS1.exe`. Precisa de uma placa de vídeo com OpenGL 3.3 (qualquer integrada recente serve).
 
@@ -15,8 +45,12 @@ Baixe o `TerrorPS1-windows.zip` da página de [Releases](https://github.com/Ezio
 |---|---|
 | Mouse | olhar |
 | WASD (Q/E ou setas giram) | andar |
+| Shift | correr |
+| Ctrl ou C (segurar) | agachar |
+| R (segurar) | prender a respiração |
 | F ou botão direito | lanterna |
-| Espaço ou botão esquerdo | forçar a armadilha / recomeçar |
+| V | câmera (flash) |
+| Espaço ou botão esquerdo | usar: forçar a armadilha, esconder-se, deixar o oitavo, a noite seguinte |
 | F11 | tela cheia |
 | Esc | sair |
 
@@ -33,14 +67,19 @@ python -m terror_ps1               # ou: run.bat
 pytest                                   # testes (regras e mapa, sem placa de vídeo)
 ruff check .                             # lint
 python -m PyInstaller terror_ps1.spec    # executável em dist/TerrorPS1/
+python tools/gerar_diario.py             # refaz docs/diario.html (o teste avisa se ficar para trás)
 ```
 
 ## Estrutura
 
 ```
 terror_ps1/
-  regras.py      lanterna, pilha, vulto, armadilhas, itens (lógica pura, testada)
-  mapa.py        a floresta 80x80 gerada por semente, marcos, trilhas e colisão
+  regras.py      lanterna, corpo, o vulto, o Cego, a floresta que mente, as noites (lógica pura, testada)
+  arrozal.py     a segunda noite: os arrozais alagados (mesmo contrato de mapa.py)
+  aldeia.py      a terceira noite: a aldeia vazia
+  bambuzal.py    a quarta noite: o bambuzal
+  menu.py        o menu (campanha) e progresso.py (o save)
+  mapa.py        o Mapa de cada noite e a floresta 80x80 (marcos, trilhas, colisão)
   malhas.py      construtores low poly (bloco, cone, torii...) e o vulto
   cena.py        a cena: render 3D (IRenderer3D da engine), HUD e som
   sons.py        os sons, sintetizados na primeira vez

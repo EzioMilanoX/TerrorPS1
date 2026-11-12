@@ -4,4 +4,4 @@
 
 """Terror PS1: terror em primeira pessoa numa floresta, na OuroborosEngine (render 3D na placa de video)."""
 
-__version__ = "0.1.0"
+__version__ = "0.7.0"

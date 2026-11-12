@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diário da floresta</title>
+<!-- Gerado por python tools/gerar_diario.py a partir do codigo e dos dados do jogo. Nao edite aqui. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Kalam:wght@400;700&family=Special+Elite&display=swap">
+<style>
+:root {
+  --mesa: #15120f; --papel: #ece2cc; --papel-2: #e3d6bb; --tinta: #2b2a35; --tinta-suave: #5a5664;
+  --linha: rgba(70, 100, 150, .22); --margem: rgba(190, 60, 60, .45); --vermelho: #a3201b;
+  --fita: rgba(226, 214, 170, .78); --mancha: rgba(120, 80, 40, .10);
+  --uv: #c6ff7a; --uv-halo: rgba(168, 110, 255, .95);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --papel: #2c2822; --papel-2: #26221d; --tinta: #d9cfbb; --tinta-suave: #a59c8b;
+    --linha: rgba(150, 170, 210, .12); --margem: rgba(200, 80, 70, .35); --vermelho: #e0574c;
+    --fita: rgba(120, 110, 80, .55); --mancha: rgba(0, 0, 0, .25);
+  }
+}
+:root[data-theme="dark"] {
+  --papel: #2c2822; --papel-2: #26221d; --tinta: #d9cfbb; --tinta-suave: #a59c8b;
+  --linha: rgba(150, 170, 210, .12); --margem: rgba(200, 80, 70, .35); --vermelho: #e0574c;
+  --fita: rgba(120, 110, 80, .55); --mancha: rgba(0, 0, 0, .25);
+}
+* { box-sizing: border-box; }
+html { background: var(--mesa); }
+body { margin: 0; background: var(--mesa); color: var(--tinta); overflow-x: hidden;
+  font: 19px/32px "Kalam", "Segoe Print", "Comic Sans MS", cursive; padding: 40px 16px 120px; }
+h1, h2, .nota, .rotulo, figcaption, .outra-letra { font-family: "Caveat", "Segoe Print", cursive; }
+.pagina { position: relative; max-width: 780px; margin: 0 auto 56px; padding: 40px 40px 40px 84px;
+  background:
+    radial-gradient(circle at 88% 12%, var(--mancha) 0 34px, transparent 36px 42px, var(--mancha) 43px 45px, transparent 46px),
+    linear-gradient(90deg, transparent 63px, var(--margem) 63px 65px, transparent 65px),
+    repeating-linear-gradient(transparent 0 31px, var(--linha) 31px 32px),
+    linear-gradient(170deg, var(--papel), var(--papel-2));
+  background-position: 0 0, 0 0, 0 8px, 0 0;
+  box-shadow: 0 18px 40px rgba(0,0,0,.55), 0 1px 0 rgba(255,255,255,.04) inset; }
+.pagina:nth-of-type(odd) { transform: rotate(-.35deg); }
+.pagina:nth-of-type(even) { transform: rotate(.3deg); }
+.pagina:not(:nth-of-type(3n)) { background-size: 0 0, auto, auto, auto; }
+.rotulo { position: absolute; top: 10px; right: 28px; font-size: 22px; color: var(--tinta-suave); }
+h1 { font-size: 72px; line-height: 1; margin: 24px 0 8px; letter-spacing: .02em; }
+h2 { font-size: 44px; line-height: 64px; margin: 0 0 8px; font-weight: 700; }
+p { margin: 0 0 32px; }
+b { font-weight: 700; }
+a { color: inherit; text-decoration-color: var(--vermelho); text-underline-offset: 4px; }
+.nota { color: var(--vermelho); font-size: 27px; transform: rotate(-1.5deg); margin: 0 0 32px 8px; }
+.nota.grande { font-size: 34px; line-height: 40px; }
+.vermelho { color: var(--vermelho); }
+.riscado { text-decoration: line-through 2px var(--vermelho); }
+.tremido { display: inline-block; animation: piscar 3.2s infinite steps(1); }
+@keyframes piscar { 0%, 70%, 100% { opacity: 1; } 72%, 76% { opacity: .15; } 74% { opacity: .8; } }
+.lista { margin: 0 0 32px; padding-left: 1.2em; }
+.lista li { margin: 0; }
+.teclas { list-style: none; padding: 0; }
+.tecla { display: inline-block; min-width: 2.2em; padding: 0 8px; line-height: 26px; text-align: center;
+  border: 1.5px solid currentColor; border-radius: 6px 9px 7px 8px; font-size: 16px; margin-right: 4px; }
+.tabela { border-collapse: collapse; margin: 0 0 32px; width: 100%; }
+.tabela td { border-bottom: 1.5px dashed var(--tinta-suave); padding: 0 6px; line-height: 31px; }
+.tabela td:last-child { text-align: right; font-weight: 700; }
+.esboco { display: block; width: 100%; height: auto; margin: 0 auto 32px; color: var(--tinta);
+  font-family: "Caveat", cursive; font-size: 17px; }
+.esboco text { fill: currentColor; }
+.esboco .nota-svg { fill: var(--vermelho); font-size: 16px; }
+.esboco .destaque { fill: var(--vermelho); font-size: 19px; font-weight: 700; }
+.esboco .duvida { fill: var(--vermelho); font-size: 30px; }
+.esboco .borda { fill: none; stroke: var(--tinta-suave); stroke-width: 1; stroke-dasharray: 2 5; }
+.esboco .trilha, .esboco .traco { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round;
+  stroke-linejoin: round; }
+.esboco .fino { stroke-width: 1.2; }
+.esboco .tracejado { stroke-dasharray: 4 4; }
+.esboco .x, .esboco .tinta-vermelha, .esboco .torii { fill: none; stroke: var(--vermelho); stroke-width: 2; stroke-linecap: round; }
+.esboco .marco { fill: var(--papel); stroke: currentColor; stroke-width: 2; }
+.esboco .anel { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.esboco .risco { fill: none; stroke: var(--vermelho); stroke-width: 1; opacity: .7; }
+.esboco .eu { fill: var(--vermelho); }
+.mapa { max-width: 520px; }
+.ruido { max-width: 560px; }
+.jizos { max-width: 560px; }
+.lado-a-lado { display: grid; grid-template-columns: 1fr 190px; gap: 24px; align-items: start; }
+.vulto { max-width: 190px; }
+.com-fita { position: relative; margin: 0 0 32px; }
+.com-fita::before, .com-fita::after { content: ""; position: absolute; width: 110px; height: 28px; background: var(--fita);
+  top: -10px; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+.com-fita::before { left: 12%; transform: rotate(-6deg); }
+.com-fita::after { right: 12%; transform: rotate(5deg); }
+.papel { margin: 0 0 32px; padding: 14px 20px 6px; background: rgba(255,255,255,.28); border: 1px solid var(--tinta-suave);
+  transform: rotate(var(--giro, -.6deg)); box-shadow: 2px 3px 0 rgba(0,0,0,.08); }
+:root[data-theme="dark"] .papel { background: rgba(0,0,0,.18); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .papel { background: rgba(0,0,0,.18); } }
+.papel:nth-of-type(even) { --giro: .8deg; }
+.papel blockquote { margin: 0; font-family: "Special Elite", "Courier New", monospace; font-size: 16px; line-height: 26px; }
+.papel figcaption { text-align: right; color: var(--tinta-suave); font-size: 21px; }
+.capa { text-align: center; padding-top: 80px; padding-bottom: 80px; }
+.capa .sub { font-family: "Caveat", cursive; font-size: 30px; color: var(--tinta-suave); }
+.capa .aviso { font-family: "Caveat", cursive; font-size: 26px; color: var(--vermelho); transform: rotate(-3deg); }
+.indice { columns: 2; column-gap: 32px; list-style: none; padding: 0; margin: 0 0 32px; counter-reset: pag; }
+.indice li { counter-increment: pag; break-inside: avoid; }
+.indice li::before { content: counter(pag) ". "; color: var(--tinta-suave); }
+.ultima { min-height: 420px; display: flex; align-items: center; }
+.outra-letra { font-size: 34px; line-height: 48px; transform: rotate(-2.5deg); color: var(--vermelho);
+  letter-spacing: .03em; }
+.outra-letra p { margin: 0 0 20px; }
+.luz { position: fixed; right: 16px; bottom: 16px; z-index: 20; font: 22px "Caveat", cursive; cursor: pointer;
+  background: var(--papel); color: var(--tinta); border: 1.5px solid var(--tinta); border-radius: 10px 14px 9px 12px;
+  padding: 6px 16px; box-shadow: 0 6px 18px rgba(0,0,0,.5); }
+.topo { position: fixed; left: 16px; bottom: 16px; z-index: 20; font: 22px "Caveat", cursive; color: #d9cfbb;
+  text-decoration: none; opacity: .75; }
+body.escuro::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 10;
+  background: radial-gradient(circle 190px at var(--mx, 50%) var(--my, 45%), transparent 0 55%, rgba(4,4,6,.93) 100%); }
+body.escuro.pisca::after { background: rgba(4,4,6,.97); }
+body.uv-on::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 10;
+  background: radial-gradient(circle 210px at var(--mx, 50%) var(--my, 45%), rgba(120, 50, 255, .16) 0 52%, rgba(9, 3, 22, .95) 100%); }
+.uv { position: absolute; z-index: 2; margin: 0; max-width: 62%; color: transparent; pointer-events: none;
+  user-select: none; font: 700 30px/34px "Caveat", "Segoe Print", cursive; letter-spacing: .04em; }
+.uv-0 { top: 74px; right: 36px; transform: rotate(7deg); }
+.uv-1 { bottom: 22px; right: 70px; transform: rotate(-4deg); }
+.uv-2 { top: 46%; left: 96px; transform: rotate(-9deg); }
+body.uv-on .uv { color: var(--uv); text-shadow: 0 0 6px var(--uv), 0 0 22px var(--uv-halo); }
+.esboco .uv-svg { fill: transparent; font-size: 18px; font-weight: 700; }
+body.uv-on .esboco .uv-svg { fill: var(--uv); }
+.luz.uv-btn { right: auto; left: 50%; transform: translateX(-50%); background: #1d1030; color: #d9c8ff; border-color: #8a5cff; }
+@media (prefers-reduced-motion: reduce) { .tremido { animation: none; } }
+@media (max-width: 640px) {
+  body { padding: 20px 16px 100px; font-size: 17px; }
+  .pagina { padding: 32px 18px 28px 40px;
+    background: linear-gradient(90deg, transparent 27px, var(--margem) 27px 29px, transparent 29px),
+      repeating-linear-gradient(transparent 0 31px, var(--linha) 31px 32px), linear-gradient(170deg, var(--papel), var(--papel-2));
+    background-position: 0 0, 0 8px, 0 0; }
+  h1 { font-size: 54px; }
+  h2 { font-size: 36px; line-height: 48px; }
+  .lado-a-lado { grid-template-columns: 1fr; }
+  .vulto { margin: 0 auto; }
+  .indice { columns: 1; }
+  .rotulo { right: 16px; }
+  .uv { font-size: 24px; line-height: 28px; max-width: 80%; }
+  .uv-2 { left: 44px; }
+}
+</style>
+</head>
+<body>
+<section class="pagina capa" id="capa">
+<p class="sub">se encontrar, devolva ao santuário</p>
+<h1>Diário</h1>
+<p class="sub">floresta ao sul da aldeia · outono</p>
+<p class="aviso">não leia de noite</p>
+<p class="uv uv-0" aria-hidden="true">não devolve. fica comigo.</p>
+</section>
+<section class="pagina" id="indice"><span class="rotulo">índice</span>
+<h2>O que tem aqui</h2>
+<ol class="indice"><li><a href="#antes">Antes de entrar</a></li><li><a href="#lanterna">A lanterna</a></li><li><a href="#ele">Ele</a></li><li><a href="#ouve">O que ele ouve</a></li><li><a href="#respirar">Respirar</a></li><li><a href="#omamori">Os omamori</a></li><li><a href="#mapa">O mapa que eu fiz</a></li><li><a href="#papeis">Os papéis que achei</a></li><li><a href="#armadilhas">Armadilhas e gravetos</a></li><li><a href="#ritmo">Ele tem ritmo</a></li><li><a href="#aprende">Ele aprende</a></li><li><a href="#mente">A floresta mente</a></li><li><a href="#nomes">Os nomes</a></li><li><a href="#esconder">Esconderijos</a></li><li><a href="#camera">A câmera</a></li><li><a href="#ayame">Ayame</a></li><li><a href="#pequena">A pequena</a></li><li><a href="#noite">A lua e a chuva</a></li><li><a href="#oitavo">O oitavo</a></li><li><a href="#arrozais">Os arrozais</a></li><li><a href="#cego">O Cego</a></li><li><a href="#aldeia">A aldeia vazia</a></li><li><a href="#imitadora">A Imitadora</a></li><li><a href="#bambuzal">O bambuzal</a></li><li><a href="#farejador">O Farejador</a></li><li><a href="#terceira">A quinta noite</a></li></ol>
+<p class="nota">tudo o que está escrito aqui aconteceu. os números eu medi contando.</p>
+<p class="uv uv-0" aria-hidden="true">você já leu isso antes.</p>
+</section>
+<section class="pagina" id="antes"><span class="rotulo">véspera</span>
+<h2>Antes de entrar</h2><p>Ayame sumiu há três noites, na floresta ao sul da aldeia. Ninguém quis vir comigo. Vou anotar
+tudo, porque se eu não voltar, alguém vai ter que vir depois.</p>
+<p>Levo uma lanterna de dínamo, uma câmera descartável e este caderno. O velho da venda disse que
+os omamori das crianças ficam onde elas sumiram, e que quem levar os <b>7</b> ao
+santuário antes de amanhecer "acerta a conta". Não perguntei de quê.</p>
+<p class="nota">o que o corpo sabe fazer:</p>
+<ul class="lista teclas"><li><span class="tecla">mouse</span> — olhar em volta</li><li><span class="tecla">W ou ↑</span> — ir em frente</li><li><span class="tecla">S ou ↓</span> — voltar de costas</li><li><span class="tecla">A</span> — passo para a esquerda</li><li><span class="tecla">D</span> — passo para a direita</li><li><span class="tecla">Q ou ←</span> — virar para a esquerda</li><li><span class="tecla">E ou →</span> — virar para a direita</li><li><span class="tecla">Shift</span> — correr (cansa, e faz barulho)</li><li><span class="tecla">Ctrl ou C</span> — agachar, segurando</li><li><span class="tecla">R</span> — prender o ar, segurando</li><li><span class="tecla">F ou botão direito</span> — acender e apagar a lanterna</li><li><span class="tecla">V</span> — tirar uma foto (o flash)</li><li><span class="tecla">Espaço ou botão esquerdo</span> — usar: forçar a armadilha, entrar e sair do esconderijo, deixar o oitavo</li><li><span class="tecla">F11</span> — tela cheia</li><li><span class="tecla">Esc</span> — desistir (sair)</li></ul>
+<p class="uv uv-0" aria-hidden="true">você já veio antes.</p></section>
+<section class="pagina" id="lanterna"><span class="rotulo">noite 1</span>
+<h2>A lanterna</h2><p>A pilha cheia dura uns <b>75 s</b> acesa. Apagada, o dínamo enche tudo de novo em
+<b>50 s</b>, então eu apago sempre que posso. Mas no escuro eu não vejo nada.</p>
+<p>O feixe é estreito: só pega o que está bem no meio, uns <b>20°</b>
+para cada lado, até uns <b>18 m</b>. Abaixo de um quarto de carga, ela começa a
+<span class="tremido">piscar</span> sozinha.</p>
+<p>Achei <b>5</b> pilhas soltas na beira das trilhas. Cada uma devolve
+<b>50%</b> da carga.</p>
+<p class="nota">apontar para ELE gasta muito mais. encarando, a pilha cheia vira uns 21 s.</p>
+<p class="uv uv-0" aria-hidden="true">ele gosta quando a luz pisca</p></section>
+<section class="pagina" id="ele"><span class="rotulo">noite 1</span>
+<h2>Ele</h2><div class="lado-a-lado"><div>
+<p>Alto demais. Magro demais. Os braços passam dos joelhos e a cabeça cai para um lado, como se o
+pescoço não aguentasse.</p>
+<p><b>Na luz, ele não se mexe.</b> Nem um dedo. Fora da luz, anda aos saltos, e cada salto quebra
+um galho: dá para ouvir <i>de que lado</i> ele está.</p>
+<p>Cada omamori que eu pego deixa ele mais inquieto: os saltos vêm mais rápido e mais longos.</p>
+<p>Se eu me afasto demais (mais de <b>24 m</b>), ele não me segue. Ele aparece
+<b>atrás</b> de mim.</p>
+<p>No escuro, os olhos dele são os <span class="vermelho">vermelhos</span>. Tem outros olhos entre
+as árvores quando eu apago a luz. Esses não se mexem. Não sei o que são.</p>
+<p class="nota">a 1,3 m dele, acabou. vi o rosto uma vez. não vou desenhar o rosto.</p>
+</div><svg class="esboco vulto" viewBox="0 0 170 300" role="img" aria-label="Esboco dele: alto, magro, bracos longos, cabeca caida para o lado"><path d="M60,74 q-4,10 -2,22" class="traco"/><ellipse cx="54" cy="52" rx="13" ry="22" transform="rotate(-22 54 52)" class="traco"/><path d="M47,50 l3,1 M57,46 l3,1 M51,64 q3,3 6,0" class="traco fino"/><path d="M42,96 q18,-6 36,0 l-6,90 q-12,4 -24,0 z" class="traco"/><path d="M42,98 q-10,60 -8,118 m2,0 l-4,14 m6,-14 l0,15 m4,-15 l4,13" class="traco"/><path d="M78,98 q10,60 8,118 m-2,0 l-4,14 m6,-14 l0,15 m4,-15 l4,13" class="traco"/><path d="M52,186 l-4,104 M68,186 l4,104" class="traco"/><text x="92" y="30" class="nota-svg">mais alto</text><text x="92" y="46" class="nota-svg">que a porta</text></svg></div>
+<p class="uv uv-0" aria-hidden="true">ele também procura alguém</p></section>
+<section class="pagina" id="ouve"><span class="rotulo">noite 2</span>
+<h2>O que ele ouve</h2><p>Ele não sabe onde eu estou. Ele <i>descobre</i>. A lanterna acesa ele vê de
+<b>30 m</b>; de <b>4,5 m</b> ele me sente, faça o que eu fizer. O resto é barulho:</p>
+<table class="tabela">
+<tr><td>correndo</td><td>16 m</td></tr>
+<tr><td>pisando num graveto</td><td>15 m</td></tr>
+<tr><td>arfando (não aguentei prender o ar)</td><td>12 m</td></tr>
+<tr><td>andando</td><td>7 m</td></tr>
+<tr><td>ofegando depois de correr</td><td>até 5,5 m</td></tr>
+<tr><td>os omamori tilintando no bolso</td><td>1,6 m cada (metade agachado)</td></tr>
+<tr><td>agachado</td><td>2 m</td></tr>
+</table>
+<svg class="esboco ruido" viewBox="0 0 460 330" role="img" aria-label="Circulos de ate onde ele ouve cada barulho"><circle cx="230" cy="164" r="140.0" class="anel"/><path d="M310.3,49.3 L378.0,21" class="risco"/><text x="452" y="26" text-anchor="end" class="nota-svg">correndo 16 m</text><circle cx="230" cy="164" r="131.2" class="anel"/><path d="M154.7,56.5 L82.0,21" class="risco"/><text x="8" y="26" text-anchor="start" class="nota-svg">graveto 15 m</text><circle cx="230" cy="164" r="105.0" class="anel"/><path d="M297.5,244.4 L378.0,295" class="risco"/><text x="452" y="300" text-anchor="end" class="nota-svg">arfar 12 m</text><circle cx="230" cy="164" r="61.2" class="anel"/><path d="M190.6,210.9 L82.0,295" class="risco"/><text x="8" y="300" text-anchor="start" class="nota-svg">andando 7 m</text><circle cx="230" cy="164" r="39.4" class="anel tracejado"/><path d="M269.4,164.0 L378.0,163" class="risco"/><text x="452" y="168" text-anchor="end" class="nota-svg">ele sente 4,5 m</text><circle cx="230" cy="164" r="17.5" class="anel"/><path d="M212.5,164.0 L82.0,163" class="risco"/><text x="8" y="168" text-anchor="start" class="nota-svg">agachado 2 m</text><circle cx="230" cy="164" r="3" class="eu"/></svg>
+<p>Uma armadilha fechando se ouve de longe: ele corre metade do caminho até mim na hora.</p>
+<p class="nota">se eu ficar quieto no escuro por muito tempo (uns 25 s), a floresta
+conta para ele onde eu estou. não dá para só esperar.</p>
+<p class="uv uv-0" aria-hidden="true">eu ouço você daqui</p></section>
+<section class="pagina" id="respirar"><span class="rotulo">noite 2</span>
+<h2>Respirar</h2><p>Correr cansa. Depois de correr eu fico ofegante, e ofegar se ouve de perto. Se eu correr até o
+fôlego acabar, não corro mais: só depois de descansar.</p>
+<p>Dá para <b>prender o ar</b> por uns <b>6 s</b>. Se eu não soltar a tempo, o ar sai de
+uma vez, alto, e ele escuta de <b>12 m</b>. O fôlego volta em uns <b>4 s</b>.</p>
+<p class="nota">ele perto + eu ofegando = agachar, apagar e prender. contar até cinco. soltar devagar.</p>
+<p class="uv uv-0" aria-hidden="true">conta até seis. no sete ele vira.</p></section>
+<section class="pagina" id="omamori"><span class="rotulo">noite 3</span>
+<h2>Os omamori</h2><p>São <b>7</b>, um em cada lugar do mapa. Saquinhos vermelhos, flutuando um pouco
+acima de onde deviam estar caídos.</p>
+<p>O guizo do mais perto toca a cada <b>3,5 s</b> quando estou a menos de
+<b>14 m</b>, do lado em que ele está.</p>
+<p>Eles pesam. Cada um no bolso me deixa uns <b>7%</b> mais lento (no máximo
+40%), e eles tilintam a cada passo. Dá para deixar os que já tenho no altar do santuário e
+voltar mais leve. Com os 7 no altar, amanhece.</p>
+<p class="nota">nem todo guizo é um omamori. ver "ele aprende".</p>
+<p class="uv uv-0" aria-hidden="true">o oitavo é o meu</p></section>
+<section class="pagina" id="mapa"><span class="rotulo">noite 3</span>
+<h2>O mapa que eu fiz</h2><figure class="com-fita"><svg class="esboco mapa" viewBox="0 0 400 400" role="img" aria-label="Mapa da floresta desenhado a mao: trilhas, os sete lugares, o santuario ao norte"><rect x="8" y="8" width="384" height="384" class="borda"/><polyline points="199.1,368.6 201.6,358.8 202.5,349.7 207.5,341.1 208.9,329.0 210.1,319.2 202.9,308.6 197.0,301.5 193.2,291.1 187.1,278.9 179.3,270.4 184.8,261.2 189.3,248.6 192.4,240.6 196.0,228.9 199.9,218.6 207.5,211.3 212.2,199.3 219.4,190.3 225.3,181.2 230.0,169.7 233.7,159.8 235.5,149.3 241.1,138.4 233.4,130.4 229.2,120.1 224.9,109.4 221.7,98.9 214.7,89.0 210.5,79.2 204.5,70.9 200.0,60.0" class="trilha"/><polyline points="199.4,220.2 191.4,218.6 178.5,219.1 170.9,220.4 159.1,219.4 148.9,219.9 138.4,220.7 129.7,218.3 117.5,214.9 105.0,210.0" class="trilha"/><polyline points="198.3,219.3 211.6,217.6 219.7,214.9 230.4,211.1 239.3,205.6 249.8,202.1 259.6,201.6 269.4,193.3 278.4,188.8 291.0,184.5 299.3,178.6 310.0,175.0" class="trilha"/><polyline points="91.7,199.7 82.3,190.1 75.1,182.2 70.6,173.8 55.0,167.5" class="trilha"/><polyline points="198.4,60.0 189.1,63.7 178.7,64.1 171.0,65.7 161.7,67.9 149.1,69.7 136.7,75.6 125.8,83.0 115.0,87.5" class="trilha"/><polyline points="211.2,320.0 218.4,322.9 229.1,326.5 239.1,332.5 248.7,333.4 261.5,330.2 271.7,324.7 281.4,320.5 290.0,315.0" class="trilha"/><polyline points="181.0,270.9 172.5,276.1 165.0,285.0" class="trilha"/><polyline points="259.0,201.3 264.7,211.5 266.1,220.5 271.0,230.5 274.4,240.1 277.2,250.7 279.2,261.5 286.6,270.2 291.6,284.9 295.0,295.0" class="trilha"/><path d="M116.3,214.6 l6,6 m0,-6 l-6,6" class="x"/><path d="M281.6,274.3 l6,6 m0,-6 l-6,6" class="x"/><path d="M271.1,229.5 l6,6 m0,-6 l-6,6" class="x"/><path d="M128.5,77.6 l6,6 m0,-6 l-6,6" class="x"/><path d="M203.9,71.2 l6,6 m0,-6 l-6,6" class="x"/><path d="M149.4,218.1 l6,6 m0,-6 l-6,6" class="x"/><path d="M205.6,323.2 l6,6 m0,-6 l-6,6" class="x"/><path d="M219.6,183.6 l6,6 m0,-6 l-6,6" class="x"/><path d="M233.6,127.8 l6,6 m0,-6 l-6,6" class="x"/><circle cx="90.0" cy="210.0" r="5" class="marco"/><text x="99.0" y="214.0" text-anchor="start">cabana</text><circle cx="320.0" cy="170.0" r="5" class="marco"/><text x="312.0" y="174.0" text-anchor="end">poco</text><circle cx="110.0" cy="90.0" r="5" class="marco"/><text x="119.0" y="94.0" text-anchor="start">arvore morta</text><circle cx="300.0" cy="310.0" r="5" class="marco"/><text x="292.0" y="314.0" text-anchor="end">circulo de pedras</text><circle cx="240.0" cy="130.0" r="5" class="marco"/><text x="249.0" y="134.0" text-anchor="start">jizos</text><circle cx="160.0" cy="290.0" r="5" class="marco"/><text x="169.0" y="294.0" text-anchor="start">troncos caidos</text><circle cx="50.0" cy="160.0" r="5" class="marco"/><text x="59.0" y="164.0" text-anchor="start">acampamento</text><text x="270.0" y="94.0" class="duvida" text-anchor="middle">?</text><text x="270.0" y="110.0" class="nota-svg" text-anchor="middle">(a árvore, às vezes?)</text><path d="M188.0,44.0 h24 M191.0,48.0 h18 M193.0,44.0 v16 M207.0,44.0 v16" class="torii"/><text x="200.0" y="38.0" text-anchor="middle" class="destaque">santuário</text><text x="200.0" y="388.0" text-anchor="middle">entrei aqui</text><path d="M200.0,374.0 v-8 m-3,3 l3,-3 l3,3" class="trilha"/><text x="380" y="34" text-anchor="end" class="nota-svg">N ↑</text><text x="314.0" y="196.0" text-anchor="end" class="uv-svg">ela tá aqui embaixo ↑</text><text x="18" y="384" class="nota-svg">x = armadilha</text></svg></figure>
+<ul class="lista"><li><b>a cabana</b> — Quatro paredes e um telhado que pinga. Tem um lampião aceso que ninguém acendeu. O diário do guarda fica na mesa.</li><li><b>o poco</b> — Não olhe para dentro. Não jogue nada dentro. Se jogar, não espere o barulho.</li><li><b>a arvore morta</b> — Uma árvore seca cheia de fitas de pano amarradas nos galhos. Cada fita é um nome.</li><li><b>o circulo de pedras</b> — Oito pedras em pé, em círculo, e um altar baixo no meio. É o lugar mais quieto da floresta.</li><li><b>os jizos</b> — A fileira de estátuas com babadores vermelhos e velas. Conte quantas são toda vez que passar.</li><li><b>os troncos caidos</b> — Dois troncos caídos atravessados. Bom lugar para se agachar.</li><li><b>o acampamento</b> — Uma barraca caída e brasas que ainda estão quentes. Quem estava aqui saiu com pressa.</li></ul>
+<p>As placas nas bifurcações apontam para os lugares. <span class="riscado">Dá para confiar nelas.</span></p>
+<p class="uv uv-0" aria-hidden="true">o mapa tá ao contrário</p></section>
+<section class="pagina" id="papeis"><span class="rotulo">noite 3</span>
+<h2>Os papéis que achei</h2><p>Tem papel escrito espalhado pela floresta. Copiei todos aqui, do jeito que estavam.</p>
+<figure class="papel"><blockquote>SANTUARIO AO NORTE. Quem entrar depois do por do sol leve luz -- e se ouvir um guizo, conte quantos amuletos ainda faltam.</blockquote><figcaption>achado na placa da entrada</figcaption></figure><figure class="papel"><blockquote>Diario do guarda, 3 de setembro. Mais uma crianca sumiu. Achamos so o omamori dela, aqui na mesa. O velho diz que a floresta conta, e que nao pode errar a conta.</blockquote><figcaption>achado na mesa da cabana</figcaption></figure><figure class="papel"><blockquote>Joguei a lanterna no poco para ver o fundo. A luz desceu, desceu. La de baixo, alguem agradeceu.</blockquote><figcaption>achado na beira do poço</figcaption></figure><figure class="papel"><blockquote>Cada fita e um nome. Amarramos para ele nao levar mais ninguem. Ele leva mesmo assim. Se a arvore nao estiver aqui quando voce voltar, nao procure.</blockquote><figcaption>achado no pé da árvore das fitas</figcaption></figure><figure class="papel"><blockquote>Nao reze em voz alta perto do circulo. Ele ouve tudo. Tudo, menos quem prende a respiracao.</blockquote><figcaption>achado no altar do círculo de pedras</figcaption></figure><figure class="papel"><blockquote>Haru, Sora, Kenji, Mei, Ren, Yui. Seis jizos para seis criancas. Se contar sete, nao conte de novo.</blockquote><figcaption>achado junto das velas dos jizos</figcaption></figure><figure class="papel"><blockquote>Ayame correu para ca atras do guizo. Eu ouvi tambem. Nao tinha guizo nenhum aqui.</blockquote><figcaption>achado entre os troncos caídos</figcaption></figure><figure class="papel"><blockquote>Se a lanterna piscar perto dele, nao e a pilha. Ele mexe na luz. Ele aprende o que voce faz.</blockquote><figcaption>achado no acampamento</figcaption></figure>
+<p class="uv uv-0" aria-hidden="true">o guizo era eu</p></section>
+<section class="pagina" id="armadilhas"><span class="rotulo">noite 4</span>
+<h2>Armadilhas e gravetos</h2><p>Alguém encheu as trilhas de armadilhas de urso: contei <b>18</b>. Sem luz, não
+se vê. Ela prende por <b>3 s</b>; batendo com força (Espaço), sai antes. Depois eu manco
+por uns <b>8 s</b>.</p>
+<p>E tem gravetos secos por todo lado nas trilhas, uns <b>80</b>. De pé, eles
+estalam alto (15 m). <b>Agachado, o pé acha o graveto antes de pisar.</b></p>
+<p class="nota">o barulho da armadilha acaba com qualquer calma. ele vem.</p>
+<p class="uv uv-0" aria-hidden="true">eu sei onde estão todas</p></section>
+<section class="pagina" id="ritmo"><span class="rotulo">noite 4</span>
+<h2>Ele tem ritmo</h2><p>Não é sempre igual. Ele aperta, aperta, chega cada vez mais perto, e quando eu acho que não
+aguento mais, ele <b>recua</b>. Fica longe por 18 a 30 segundos. A
+noite começa assim, num recuo curto.</p>
+<p>Os grilos, os sapos e a coruja <b>calam</b> quando ele chega a <b>13 m</b> de mim, e só
+voltam quando ele está a mais de <b>19 m</b>.</p>
+<p class="nota grande">se os grilos param, não importa o que eu vejo. ele está perto.</p>
+<p>É no recuo, no silêncio bom, que a floresta muda. Ver "a floresta mente".</p>
+<p class="uv uv-0" aria-hidden="true">quando os grilos voltam eu durmo</p></section>
+<section class="pagina" id="aprende"><span class="rotulo">noite 5</span>
+<h2>Ele aprende</h2><p>Na segunda noite eu fiquei girando a lanterna em volta de mim o tempo todo. Funcionou por um
+tempo. Depois ele <b>parou de vir</b> quando eu estava atento, e começou a esperar: quando eu
+apagava, quando eu ficava preso, quando a luz falhava. E aí vinha o dobro.</p>
+<p>E a luz falha. Quando eu o encaro de perto, ela pisca justo nessa hora. Não é a pilha.</p>
+<p>E ele imita o guizo. De vez em quando (a cada 22 a 40 s, se ele
+estiver longe o bastante e fora da minha vista) eu ouço um guizo do lado dele, igual ao
+de verdade.</p>
+<p class="nota">guizo onde não tem omamori por perto = ele chamando.</p>
+<p class="uv uv-0" aria-hidden="true">ele aprendeu comigo</p></section>
+<section class="pagina" id="mente"><span class="rotulo">noite 5</span>
+<h2>A floresta mente</h2><p>Até eu pegar o primeiro omamori, a floresta é honesta. Depois, não. E ela nunca muda nada
+<b>enquanto eu estou olhando</b>.</p>
+<svg class="esboco jizos" viewBox="0 0 400 130" role="img" aria-label="A fileira de jizos: seis, depois sete, depois oito"><path d="M17,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="30" cy="46" r="10" class="traco"/><path d="M19,62 q11,10 22,0" class="tinta-vermelha"/><text x="30" y="112" text-anchor="middle" class="">Haru</text><path d="M64,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="77" cy="46" r="10" class="traco"/><path d="M66,62 q11,10 22,0" class="tinta-vermelha"/><text x="77" y="112" text-anchor="middle" class="">Sora</text><path d="M111,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="124" cy="46" r="10" class="traco"/><path d="M113,62 q11,10 22,0" class="tinta-vermelha"/><text x="124" y="112" text-anchor="middle" class="">Kenji</text><path d="M158,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="171" cy="46" r="10" class="traco"/><path d="M160,62 q11,10 22,0" class="tinta-vermelha"/><text x="171" y="112" text-anchor="middle" class="">Mei</text><path d="M205,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="218" cy="46" r="10" class="traco"/><path d="M207,62 q11,10 22,0" class="tinta-vermelha"/><text x="218" y="112" text-anchor="middle" class="">Ren</text><path d="M252,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="265" cy="46" r="10" class="traco"/><path d="M254,62 q11,10 22,0" class="tinta-vermelha"/><text x="265" y="112" text-anchor="middle" class="">Yui</text><path d="M299,90 v-30 q13,-10 26,0 v30 z" class="traco tracejado"/><circle cx="312" cy="46" r="10" class="traco tracejado"/><path d="M301,62 q11,10 22,0" class="tinta-vermelha"/><text x="312" y="112" text-anchor="middle" class="">?</text><path d="M346,90 v-30 q13,-10 26,0 v30 z" class="traco tracejado"/><circle cx="359" cy="46" r="10" class="traco tracejado"/><path d="M348,62 q11,10 22,0" class="tinta-vermelha"/><text x="359" y="112" text-anchor="middle" class="destaque">Ayame</text><text x="300" y="20" class="nota-svg">eram seis.</text></svg>
+<ul class="lista">
+<li>Os jizos se viram para mim quando eu não estou olhando.</li>
+<li>Eram seis. Com 3 omamori comigo, eram sete. Com 5, oito.</li>
+<li>A árvore das fitas não estava onde eu deixei. Estava a leste, depois voltou.</li>
+<li>Uma placa que apontava para a cabana passou a apontar para outro lugar.</li>
+<li>Achei pegadas. As botas são as minhas. Saem da trilha para dentro do mato, para um lado onde
+eu nunca fui.</li>
+</ul>
+<p class="nota">não siga as pegadas.</p>
+<p class="uv uv-0" aria-hidden="true">as pegadas são suas. da outra vez.</p></section>
+<section class="pagina" id="nomes"><span class="rotulo">noite 5</span>
+<h2>Os nomes</h2><p>Os jizos têm nomes escritos na base. Só dá para ler de perto, com a luz.</p>
+<ol class="lista nomes"><li>Haru</li><li>Sora</li><li>Kenji</li><li>Mei</li><li>Ren</li><li>Yui</li></ol>
+<p>O sétimo é uma pedra lisa, sem nome. <i>Ainda.</i></p>
+<p>O oitavo diz <b class="vermelho">Ayame</b>.</p>
+<p class="uv uv-0" aria-hidden="true">o sétimo é o seu</p></section>
+<section class="pagina" id="esconder"><span class="rotulo">noite 6</span>
+<h2>Esconderijos</h2><p>Achei três lugares para sumir: atras da mesa, dentro do poco, na barraca caida. Entro e saio com a mesma tecla de forçar a
+armadilha.</p>
+<p>Escondido, eu não ando e não faço barulho de passo. Mas <b>se ele soube de mim nos últimos
+3 segundos</b>, ele me viu entrar, e o esconderijo não serve de nada. Lanterna
+acesa lá dentro também me entrega.</p>
+<p>Uma hora ele vem conferir. Se ele chegar a <b>2,5 m</b> e eu estiver
+respirando, ele me acha. <b>Prender o ar</b> é o que me salvou.</p>
+<p class="nota">ele lembra. na noite seguinte, o lugar onde eu me escondi não serve mais.</p>
+<p class="uv uv-0" aria-hidden="true">o poço é meu. não entra.</p></section>
+<section class="pagina" id="camera"><span class="rotulo">noite 6</span>
+<h2>A câmera</h2><p>Uma câmera descartável com <b>6</b> fotos. O flash cega ele por uns
+<b>3 s</b> se ele estiver na frente, até <b>15 m</b>, num cone de
+uns 35° para cada lado.</p>
+<p>Mas o clarão se vê de longe: se ele não estava na frente, agora ele sabe onde eu estou.</p>
+<p><b>Na foto aparece o que a floresta esconde.</b> Jizos que ainda não estão lá. Alguém parado na
+minha frente, que não estava lá quando eu apertei.</p>
+<p class="nota">não olhe as fotos por muito tempo.</p>
+<p class="uv uv-0" aria-hidden="true">sorri</p></section>
+<section class="pagina" id="ayame"><span class="rotulo">noite 7</span>
+<h2>Ayame</h2><p>Vi uma criança correndo entre as árvores. A yukata clara, a faixa vermelha. É ela. Só aparece
+quando está tudo calmo, e longe.</p>
+<p>Ela não me deixa chegar perto: a uns <b>7 m</b> ela some. Mas ela corre para algum
+lugar. Quase sempre (60% das vezes que eu anotei) é um omamori.
+As outras vezes é uma armadilha.</p>
+<p class="nota">os passinhos dela vêm do lado em que ela está.</p>
+<p class="uv uv-0" aria-hidden="true">por que você não corre mais rápido?</p></section>
+<section class="pagina" id="pequena"><span class="rotulo">noite 7</span>
+<h2>A pequena</h2><p>Depois do 5º omamori apareceu outra coisa. Pequena, de quatro, os braços
+compridos para a frente. Ela é o contrário dele: <b>só anda quando a luz está nela</b>. A lanterna e
+o flash: tudo é luz.</p>
+<p>Ele só anda quando a luz <i>não</i> está nele. Ela só anda quando está. Não existe jeito certo de
+segurar a lanterna. Quando ela se mexe, as juntas estalam.</p>
+<p class="nota">a 1 m dela, acabou também.</p>
+<p class="uv uv-0" aria-hidden="true">ela não sou eu</p></section>
+<section class="pagina" id="noite"><span class="rotulo">noite 8</span>
+<h2>A lua e a chuva</h2><p>A noite piora. Em uns 15 minutos a lua se põe e a neblina fecha.</p>
+<p>No meio da noite (entre 4 e 7 minutos)
+começa a chover, por uns 2 a 3 minutos. A
+chuva cobre o barulho: tudo o que eu faço chega a <b>40%</b> da distância.
+Mas eu também não ouço o galho dele, e os grilos se calam com a chuva, então o silêncio não avisa
+mais nada.</p>
+<p class="nota">na chuva eu fico mais escondido e mais cego ao mesmo tempo.</p>
+<p class="uv uv-0" aria-hidden="true">na chuva eu chego mais perto</p></section>
+<section class="pagina" id="oitavo"><span class="rotulo">noite 9</span>
+<h2>O oitavo</h2><p>Quando o sétimo omamori fica no altar, aparece um oitavo. Ninguém trouxe.</p>
+<p>Dá para deixar ele lá e esperar o amanhecer. Ou pegar e levar de volta para a floresta.</p>
+<p>Eu deixei.</p>
+<p class="nota">não sei o que acontece com quem leva.</p>
+<p class="uv uv-0" aria-hidden="true">leva. eu tô esperando.</p></section>
+<section class="pagina" id="arrozais"><span class="rotulo">segunda noite</span>
+<h2>Os arrozais</h2><p>Amanheceu, e anoiteceu de novo, em outro lugar: os arrozais da represa, alagados desde a
+enchente. Campo aberto, água parada até a canela, diques de terra entre as quadras e um canal fundo
+cortando tudo de leste a oeste, com uma ponte só.</p>
+<p>Na água rasa eu ando a <b>60%</b> da velocidade e cada passo espirra
+(10 m; agachado, a metade). No canal, <b>40%</b> e
+14 m. <b>Nos diques, o chão é seco e quieto</b> — mas é lá que estão as
+armadilhas.</p>
+<p>Para sumir: no feno do galpao, embaixo da ponte, ou <b>afundar no canal</b> (a tecla de usar, na água funda).
+Embaixo d'água ninguém me vê nem me ouve, mas o ar acaba sozinho: uns
+15 segundos, e eu subo arfando.</p>
+<p class="nota">os espantalhos se viram para mim. como os jizos.</p>
+<p class="uv uv-0" aria-hidden="true">a água guarda o som</p></section>
+<section class="pagina" id="cego"><span class="rotulo">segunda noite</span>
+<h2>O Cego</h2><p>O guarda da represa. Enorme, mais de três metros, curvado, a cabeça enrolada em faixas. Não tem
+olhos. <b>A luz não muda nada para ele</b>: ele anda com a lanterna na cara.</p>
+<p>Mas ele ouve tudo, 60% mais longe que o outro: um passo na água
+ele ouve de 16 m; correndo, de 25,6 m.
+Quando ouve, ele geme e <b>corre</b> para o som. Se não ouve nada, ele vaga devagar, e cada volta
+dele termina um pouco mais perto de mim.</p>
+<p>Os passos dele são pesados, na água, e vêm do lado em que ele está. O coro de sapos cala quando
+ele chega perto.</p>
+<p class="nota">se ele esbarrar em mim (uns 1,4 m), acabou. ficar parado e quieto
+funciona. até ele tropeçar em mim.</p>
+<p class="uv uv-0" aria-hidden="true">ele era bom. antes.</p></section>
+<section class="pagina" id="aldeia"><span class="rotulo">terceira noite</span>
+<h2>A aldeia vazia</h2><p>A aldeia. As casas fechadas, as lanternas de papel ainda acesas na rua principal, ninguém.
+A venda do velho, a escola, a torre de vigia, o banho público, o cemitério. E a casa dos Mori,
+onde Ayame morava: na parede, um desenho da família. Cinco pessoas. Nós éramos quatro.</p>
+<p>Nas varandas, bonecas de madeira. Elas se viram para mim, como os jizos.</p>
+<p>Para sumir: no armario da venda, embaixo da varanda dos Mori, no barril de agua do banho.</p>
+<p class="nota">não responda a ninguém que chame pelo seu nome.</p>
+<p class="uv uv-0" aria-hidden="true">a quinta pessoa sou eu</p></section>
+<section class="pagina" id="imitadora"><span class="rotulo">terceira noite</span>
+<h2>A Imitadora</h2><p>Vi Ayame no meio da rua, parada, olhando para mim. Chorando. Quase corri até ela.</p>
+<p><b>A Ayame de verdade nunca fica parada</b>: ela corre para longe, e dá para ouvir os passinhos.
+<b>A outra espera</b>, de frente, e chora. Ela aparece no meu caminho, a uns
+11 ou 16 metros.</p>
+<p>Enquanto eu olho para ela, ela não se mexe. Se eu der as costas com ela a menos de
+<b>12 m</b>, ela corre. Rápido. Mais rápido que eu.</p>
+<p>Ela esquece de quem some: se eu me escondo, quando eu saio ela não está mais lá.</p>
+<p class="nota">recuar sem tirar os olhos dela. dar a volta pela outra rua.</p>
+<p class="uv uv-0" aria-hidden="true">eu nunca chorei. nunca.</p></section>
+<section class="pagina" id="bambuzal"><span class="rotulo">quarta noite</span>
+<h2>O bambuzal</h2><p>Um bambuzal fechado, com trilhas estreitas. A cabana do cortador, o forno de carvão, uma cabeça
+de pedra caída de lado, a clareira das lanternas, o sino.</p>
+<p>Fora da trilha, o chão é cheio de <b>tocos de bambu cortados em ponta</b>. De pé, o toco corta a
+canela e eu sangro por uns <b>14 s</b>. Agachado, o pé acha o toco antes. A armadilha também
+corta.</p>
+<p>Para sumir: dentro do forno de carvao, embaixo da cabana do cortador, no oco da cabeca de pedra.</p>
+<p class="nota">não corte caminho pelo bambu.</p>
+<p class="uv uv-0" aria-hidden="true">o cortador sou eu</p></section>
+<section class="pagina" id="farejador"><span class="rotulo">quarta noite</span>
+<h2>O Farejador</h2><p>Comprido, de quatro, o pescoço esticado e a cabeça rente ao chão. Não tem olhos. Não ouve. Ele
+<b>só segue o meu sangue</b>.</p>
+<p>Sangrando, eu deixo uma gota a cada 0,7 m (parado, uma por segundo). Ele segue as
+gotas <b>na ordem em que caíram</b>, lambendo uma por uma, mais devagar que eu andando
+(1,9 m/s) e mais rápido que eu agachado. Gota com mais de 75 s
+seca, e ele não quer.</p>
+<p>Quando eu paro de sangrar, ele chega na última gota e se perde. Escondido sem sangrar, ele passa
+do lado. Escondido sangrando, o rastro leva até a porta.</p>
+<p class="nota">dá para ouvir ele farejando, do lado em que está.</p>
+<p class="uv uv-0" aria-hidden="true">ele lambe devagar. sem pressa.</p></section>
+<section class="pagina" id="terceira"><span class="rotulo">quinta noite</span>
+<h2>A quinta noite</h2><p>A floresta de novo. Mas <b>ao contrário</b>: a esquerda era a direita.
+O meu mapa não servia mais.</p>
+<p>Tinha um jizo na entrada. Ele não esperou: não teve calma no começo. Ele já sabia girar a luz
+contra mim (ele começa sabendo, no mínimo, o que aprendeu antes). Ele lembrava onde eu tinha me
+escondido.</p>
+<p class="nota">ele lembra de tudo o que eu fiz.</p>
+<p class="uv uv-0" aria-hidden="true">de novo</p></section>
+<section class="pagina ultima" id="ultima"><div class="outra-letra">
+<p>Achei este caderno na mesa da cabana, debaixo do diário do guarda.</p>
+<p>A letra é a minha.</p>
+<p>Eu não me lembro de ter escrito nada disso.</p>
+<p>No altar havia oito omamori. Eu trouxe sete.</p>
+</div>
+<p class="uv uv-0" aria-hidden="true">acorda</p></section>
+<a class="topo" href="#indice">↑ índice</a>
+<button class="luz" type="button" data-modo="escuro">apagar a luz</button>
+<button class="luz uv-btn" type="button" data-modo="uv-on">luz negra</button>
+<script>
+(function () {
+  var corpo = document.body, botoes = document.querySelectorAll('.luz');
+  var texto = {escuro: ['apagar a luz', 'acender a luz'], 'uv-on': ['luz negra', 'luz normal']};
+  function mover(x, y) { corpo.style.setProperty('--mx', x + 'px'); corpo.style.setProperty('--my', y + 'px'); }
+  addEventListener('pointermove', function (e) { mover(e.clientX, e.clientY); });
+  addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) mover(t.clientX, t.clientY); }, {passive: true});
+  var calmo = matchMedia('(prefers-reduced-motion: reduce)').matches, relogio = null;
+  function falhar() {  /* de vez em quando a lanterna falha -- como no jogo */
+    if (!corpo.classList.contains('escuro') || calmo) return;
+    corpo.classList.add('pisca');
+    setTimeout(function () { corpo.classList.remove('pisca'); }, 90 + Math.random() * 160);
+  }
+  botoes.forEach(function (botao) {  /* apagar a luz (lanterna) ou luz negra (le a tinta UV): um modo por vez */
+    botao.addEventListener('click', function () {
+      var modo = botao.dataset.modo, ligar = !corpo.classList.contains(modo);
+      corpo.classList.remove('escuro', 'uv-on');
+      botoes.forEach(function (b) { b.textContent = texto[b.dataset.modo][0]; });
+      if (ligar) { corpo.classList.add(modo); botao.textContent = texto[modo][1]; }
+      clearInterval(relogio);
+      if (ligar && modo === 'escuro') relogio = setInterval(function () { if (Math.random() < .25) falhar(); }, 2500);
+    });
+  });
+})();
+</script>
+</body>
+</html>

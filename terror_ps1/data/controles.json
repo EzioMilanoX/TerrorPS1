@@ -1,12 +1,40 @@
 {
-  "frente": ["KEY_W", "KEY_UP"],
-  "tras": ["KEY_S", "KEY_DOWN"],
+  "frente": [
+    "KEY_W",
+    "KEY_UP"
+  ],
+  "tras": [
+    "KEY_S",
+    "KEY_DOWN"
+  ],
   "esquerda": "KEY_A",
   "direita": "KEY_D",
-  "girar_esq": ["KEY_Q", "KEY_LEFT"],
-  "girar_dir": ["KEY_E", "KEY_RIGHT"],
-  "lanterna": ["KEY_F", "MOUSE_RIGHT"],
+  "girar_esq": [
+    "KEY_Q",
+    "KEY_LEFT"
+  ],
+  "girar_dir": [
+    "KEY_E",
+    "KEY_RIGHT"
+  ],
+  "correr": "KEY_LEFT SHIFT",
+  "agachar": [
+    "KEY_LEFT CTRL",
+    "KEY_C"
+  ],
+  "prender_ar": "KEY_R",
+  "lanterna": [
+    "KEY_F",
+    "MOUSE_RIGHT"
+  ],
+  "foto": "KEY_V",
   "tela_cheia": "KEY_F11",
-  "soltar": ["KEY_SPACE", "MOUSE_LEFT"],
-  "sair": "KEY_ESCAPE"
+  "soltar": [
+    "KEY_SPACE",
+    "MOUSE_LEFT"
+  ],
+  "sair": "KEY_ESCAPE",
+  "dev_radar": "KEY_F2",
+  "dev_ir": "KEY_F3",
+  "dev_acelerar": "KEY_F4"
 }
