@@ -1,0 +1,9 @@
+{
+  "window_width": 960,
+  "window_height": 540,
+  "window_title": "Terror PS1",
+  "entity_capacity": 16,
+  "difficulty_path": "dificuldade.json",
+  "input_bindings_path": "controles.json",
+  "renderer": "gl"
+}
