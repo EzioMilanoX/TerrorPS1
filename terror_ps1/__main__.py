@@ -23,9 +23,12 @@ from pathlib import Path
 
 from ouroboros.bootstrap.engine_config import EngineConfig
 
+import terror_ps1
 from terror_ps1.composition import build_game
 
-DADOS = Path(__file__).resolve().parent / "data"  # relativo ao modulo: abre de qualquer pasta, ate no .exe
+# a pasta data do PACOTE (nao deste arquivo): no .exe o __main__ fica fora do pacote, e
+# Path(__file__) apontava para _internal/data -- que nao existe (o jogo nao abria empacotado)
+DADOS = Path(terror_ps1.__file__).resolve().parent / "data"
 
 
 def carregar_config() -> EngineConfig:
