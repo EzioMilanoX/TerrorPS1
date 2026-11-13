@@ -84,8 +84,56 @@ do M21) e saiu para repo próprio na v0.1.0 (2026-11-11).
   WASD), no menu; liga/desliga, só na sessão. Libera: escolher a noite (e espelhada) e as
   trapaças `imortal`, `pilha_infinita`, `filme_infinito` (campos do `Estado`, em `PERSISTE`).
   Todo "pego" passa por `regras._pegar` (onde o "não morrer" atua). Com o modo dev ligado,
-  na noite: F2 radar, F3 ir para o próximo lugar, F4 acelerar x4 (`cena._ferramentas_dev`). Não documentar o código
+  na noite: F2 radar (com os omamori que faltam e a distância do mais perto), F3 ir para o próximo lugar, F4 acelerar x4 (`cena._ferramentas_dev`). Não documentar o código
   no README (é segredo de dev).
+
+## O cemitério, a morte que conta e a noite sem saída (v0.8, 2026-11-12)
+Inspirado (sem copiar) na Chimera do mod Hypno's Lullaby.
+- Noite 5 = `cemiterio.py`: túmulos em fileiras (`Mapa.pedras` = x, z, altura), **sem esconderijos**.
+  Depois dele, a floresta espelhada (noite 6).
+- O Fantoche (`_fantoche`): **uma regra**, só cai com a luz na coisa nas costas
+  (`costas_do_fantoche`, e você atrás dela); de frente, nada. Fora isso ela sempre vem
+  (`FANTOCHE_VEL`), virando devagar (`FANTOCHE_GIRO`; virada mais que `FANTOCHE_PARA`, só gira).
+  Dorme até o 1º omamori (`fantoche_acordou`). Caída: `FANTOCHE_CAIDA` s.
+- Agarrado (`_agarrado`, só ela agarra): segurar agachar `AGARRADO_SEGURAR` s, depois
+  `AGARRADO_CHUTES` apertos de correr antes de `AGARRADO_TEMPO`; soltou = ela cai. A trapaça
+  `imortal` faz soltar.
+- A morte conta: `verdades.py` (5 frases por monstro); `progresso.morreu(quem)` guarda a conta.
+  A tela de pego dura `regras.PEGO_DURA` (3 s). Na 5ª do Fantoche, ela cai na sua frente.
+- Sem saída: quando ela acorda na campanha, `progresso.trancar(noite)`; ESC não sai (dev sai) e
+  `composition.build_game` abre direto na noite trancada. `_concluiu` destranca.
+
+## A história (v0.9, 2026-11-12)
+- **`HISTORIA.md` é a bíblia**: 7 noites + 1 secreta (Sai no Kawara), monstros = os sete da aldeia
+  (Shichinin Misaki), roda Kagome na 7ª, final falso / verdadeiro, o modo pesadelo e as etapas.
+  Texto novo (verdades, diário, bilhetes) segue ela.
+- A floresta é só do vulto (`Mapa.tem_pequena` agora é `False` por padrão).
+- Noite 6 = `escola.py`: um prédio com paredes de verdade (`PAREDES` viram `caixas` e blocos; o
+  terreo tem teto em `ALTO`), pátio, ginásio, piscina, coelheira. A Pequena aparece no 1º omamori
+  (`Mapa.pequena_aparece`) e **vem para a luz** (`_pequena`): lanterna acesa = ela vem devagar
+  (`PEQUENA_INTERVALO_LONGE`), luz nela = correndo; apagada, para. Passa pelas paredes.
+  `test_a_escola_tem_tudo_alcancavel_pelas_portas` anda pela colisão e confere tudo alcançável.
+- Noite 7 = `torii.py` + `regras._roda`: sem omamori; no meio da clareira (`Mapa.roda_centro`)
+  a roda fecha. Estados `Estado.roda`: canto (olhos fechados, parado, lanterna apaga, `RODA_CANTO`)
+  → atras (`roda_quem` atrás de você, só som `SOM_NA_RODA`; resposta pela regra dele em
+  `RODA_JANELA`) → acertou (ele aparece na sua frente, luz acesa) → ... → vazio (ninguém atrás)
+  → fim (`oitavo = "altar"`). Errar/demorar = `_pegar(quem)`; `imortal` conta como acerto.
+  Ordem sorteada (`e.rng`). Final: `cena._hud_final` (falso se `_levou`, senão o rio).
+- Noite secreta = `rio.py` + `regras._esconde` (`Mapa.tem_esconde`): sem monstro; a Ayame num dos
+  `esconde_lugares`, cantarolando (`ESCONDE_CANTA`, som "roda"); luz nela de mais longe que
+  `ESCONDE_PERTO` = ela corre para outro lugar. Perto (`ACHAR`), ESPACO = `fim == "achou"`.
+- O caminho: depois do torii, `cena` chama `proxima_noite(s, secreta=not _levou)`; continuar a
+  campanha usa `regras.noite_da_campanha(c)` (noite 8 + nunca levou = rio). Levou: noite 8 = a
+  floresta espelhada (o pesadelo, ainda por fazer). Achou: `progresso.marcar_fim("verdadeiro")` e
+  a campanha é apagada; o torii com o oitavo levado marca "falso" (`progresso.fins()`).
+- Menu dev: um item "noite" (A/D troca, a última é a secreta) no lugar de uma linha por noite.
+- O pesadelo = as noites espelhadas (noite > 7): `mapa.pesadelo(m)` liga o par de `mapa.PARES`
+  (monstros que se completam), `Mapa.fogo`/`fogos` (chamas emissivas + luz laranja em cada uma,
+  `mapa.geometria_fogo`; o fogo só bloqueia, não fere) e névoa vermelha; na roda, `RODA_PESADELO`.
+  O menu mostra "Pesadelo" depois de um final (`progresso.fins()`); começa na noite 8 com
+  `levou_oitavo=True` (no pesadelo o rio não abre).
+- `progresso.campanha()["levou_oitavo"]`: levou o 8º em alguma noite da campanha (fecha o final
+  verdadeiro). Gravado em `cena._concluiu`.
 
 ## Desativados por enquanto (2026-11-12)
 O sinalizador e o diário dentro do jogo (as páginas + TAB) saíram: muita coisa para lembrar.
@@ -101,6 +149,10 @@ aparecem com a "luz negra"). Gerado por `tools/gerar_diario.py`:
 números, bilhetes, nomes, mapa e controles vêm do código; só a voz do diário mora no
 gerador. Mudou regra, texto ou controle? Rode o gerador (`tests/test_diario.py` falha se
 esquecer). Ação nova em `controles.json` precisa de frase em `ACAO`.
+O botão "riscar um fósforo" queima o caderno (a chama sobe pela tela, `.fogo-tela`) e troca as
+páginas pelo caderno queimado = o pesadelo (`paginas_queimadas()`: uma folha por noite, com o par
+de `mapa.PARES_TEXTO` e os números do código; `[[palavra]]` = palavra comida pelo fogo; beiras e
+furos sorteados com semente fixa). "o caderno de antes" volta.
 
 ## Próximos passos
 - Calibrar (só quando o Enzo pedir): raios de som, tensão, frequência das mentiras.

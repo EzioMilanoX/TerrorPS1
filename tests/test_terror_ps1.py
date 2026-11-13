@@ -446,8 +446,15 @@ def test_ayame_aparece_no_calmo_e_corre_para_algum_lugar(floresta):
     assert e.ayame is None  # chegou perto, ela some
 
 
+def test_a_floresta_e_so_do_vulto(floresta):
+    e = _no_mapa(floresta, coletados=7, vulto=(35.0, 35.0), fase="recuo", duracao_fase=1e9)
+    _passos(e, 30)
+    assert not floresta.tem_pequena and e.pequena is None
+
+
 def test_a_pequena_so_anda_na_luz(floresta):
-    e = _no_mapa(floresta, coletados=5, vulto=(35.0, 35.0), fase="recuo", duracao_fase=1e9)
+    import dataclasses
+    e = _no_mapa(dataclasses.replace(floresta, tem_pequena=True), coletados=5, vulto=(35.0, 35.0), fase="recuo", duracao_fase=1e9)
     regras.atualizar(e, 1 / 60, 0, 0, 0, False)
     assert e.pequena is not None and "pequena" in e.eventos
     e.pequena = (e.x, e.z - 6.0)  # na frente, no feixe
@@ -512,7 +519,13 @@ def test_os_dois_finais_e_a_noite_seguinte(floresta):
     regras.proxima_noite(e2)
     assert e2.noite_n == 4 and e2.mapa.bioma == "bambuzal" and not e2.espelho  # o bambuzal
     regras.proxima_noite(e2)
-    assert e2.noite_n == 5 and e2.mapa.bioma == "floresta" and e2.espelho and e2.jizo_entrada  # de novo, espelhada
+    assert e2.noite_n == 5 and e2.mapa.bioma == "cemiterio" and not e2.espelho  # o cemiterio
+    regras.proxima_noite(e2)
+    assert e2.noite_n == 6 and e2.mapa.bioma == "escola" and not e2.espelho  # a escola
+    regras.proxima_noite(e2)
+    assert e2.noite_n == 7 and e2.mapa.bioma == "torii" and not e2.espelho  # a roda
+    regras.proxima_noite(e2)
+    assert e2.noite_n == 8 and e2.mapa.bioma == "floresta" and e2.espelho and e2.jizo_entrada  # de novo, espelhada
     assert e2.fase == "caca" and e2.aprendeu >= 0.6 and e2.coletados == 0  # sem calma: ele ja sabe
     from terror_ps1.mapa import ESCONDERIJOS
     x, z, _ = ESCONDERIJOS["dentro do poco"]
@@ -520,7 +533,7 @@ def test_os_dois_finais_e_a_noite_seguinte(floresta):
     _usar_espaco(e2)
     assert e2.escondido and e2.achado  # ele lembra do poco
     regras.reiniciar(e2)
-    assert e2.noite_n == 5 and e2.espelho  # morrer nao desfaz a noite seguinte
+    assert e2.noite_n == 8 and e2.espelho  # morrer nao desfaz a noite seguinte
 
 
 # ---------------------------------------------------------------- a segunda noite: os arrozais e o Cego
@@ -749,3 +762,334 @@ def test_escondido_sem_sangrar_ele_passa_sangrando_ele_acha(bambuzal_mapa):
     e.sangrando = 5.0
     regras.atualizar(e, 1 / 60, 0, 0, 0, False)
     assert e.pego > 0  # sangrando, o rastro leva ate voce
+
+
+# ---------------------------------------------------------------- a quinta noite: o cemiterio e o Fantoche
+
+@pytest.fixture(scope="module")
+def cemiterio_mapa():
+    from terror_ps1 import cemiterio
+    return cemiterio.gerar_mapa()
+
+
+def _no_cemiterio(m, acordada=True, **kw):
+    e = regras.Estado(mapa=m)
+    e.fantoche_acordou = acordada
+    for k, v in kw.items():
+        setattr(e, k, v)
+    return e
+
+
+def _mirar(e, ponto):
+    """Vira o jogador (e o feixe, ja assentado) para um ponto (x, y, z)."""
+    o = e.olhos()
+    dx, dy, dz = ponto[0] - o[0], ponto[1] - o[1], ponto[2] - o[2]
+    e.giro = math.atan2(dx, -dz)
+    e.inclina = math.atan2(dy, math.hypot(dx, dz))
+    e.feixe = regras.direcao(e.giro, e.inclina)
+
+
+def test_o_cemiterio_tem_tudo_alcancavel_e_nenhum_esconderijo(cemiterio_mapa):
+    from terror_ps1 import cemiterio
+    m = cemiterio_mapa
+    assert m.bioma == "cemiterio" and m.tem_fantoche and not m.tem_vulto and not m.esconderijos
+    assert len(m.pedras) > 150 and all(cemiterio.dist_trilha(x, z) > 1.7 for x, z, _ in m.pedras)
+    for x, z in [(a[0], a[1]) for a in m.amuletos] + m.pilhas:
+        px, pz = regras.colidir(x, z, m.circulos_perto(x, z), m.caixas, (-40, 40, -40, 40))
+        assert math.hypot(px - x, pz - z) < regras.PEGAR_ITEM
+
+
+def test_ela_dorme_ate_o_primeiro_omamori(cemiterio_mapa):
+    e = _no_cemiterio(cemiterio_mapa, acordada=False)
+    antes = list(e.fantoche)
+    _passos(e, 60)
+    assert e.fantoche == antes and e.dist_fantoche() > 1e8  # deitada: nao conta como ameaca
+    e.coletados = 1
+    assert "fantoche_acorda" in _passos(e, 1) and e.fantoche_acordou
+
+
+def test_ela_vem_sempre_virando_devagar(cemiterio_mapa):
+    e = _no_cemiterio(cemiterio_mapa, x=0.0, z=20.0, acesa=False)  # sem luz: so a regra de andar
+    e.fantoche = [0.0, 10.0, 0.0]  # de frente para voce (+z)
+    _passos(e, 60)
+    assert 10.0 + regras.FANTOCHE_VEL * 0.9 < e.fantoche[1] < 10.0 + regras.FANTOCHE_VEL * 1.1
+    e.fantoche = [0.0, 10.0, math.pi]  # de costas: so gira, devagar
+    _passos(e, 60)
+    assert abs(e.fantoche[1] - 10.0) < 1e-6 and abs(abs(e.fantoche[2]) - (math.pi - regras.FANTOCHE_GIRO)) < 0.02
+
+
+def test_luz_de_frente_nada_luz_nas_costas_ela_cai(cemiterio_mapa):
+    e = _no_cemiterio(cemiterio_mapa, x=0.0, z=16.0)
+    e.fantoche = [0.0, 10.0, 0.0]  # olhando para voce
+    _mirar(e, (0.0, 1.3, 10.0))
+    _passos(e, 30)
+    assert e.fantoche_caida <= 0  # a luz bateu no rosto da morta
+    e.x, e.z = 0.0, 4.0  # atras dela
+    e.fantoche = [0.0, 10.0, 0.0]
+    _mirar(e, regras.costas_do_fantoche(e))
+    ev = _passos(e, 2)
+    assert "fantoche_cai" in ev and e.fantoche_caida > 0
+    parada = list(e.fantoche)
+    _passos(e, 60)
+    assert e.fantoche == parada  # no chao ela nao anda
+    e.fantoche_caida = 0.01
+    assert "fantoche_levanta" in _passos(e, 2)
+
+
+def test_agarrado_segura_chuta_e_solta(cemiterio_mapa):
+    e = _no_cemiterio(cemiterio_mapa, x=0.0, z=10.0, acesa=False)
+    e.fantoche = [0.0, 9.0, 0.0]
+    assert "agarrou" in _passos(e, 1) and e.agarrado > 0 and e.olhos()[1] < 0.5
+    _passos(e, 5, correr=True)  # chutar antes de segurar nao conta
+    assert e.chutes == 0
+    _passos(e, 70, agachar=True)
+    assert e.segurou >= regras.AGARRADO_SEGURAR
+    ev = []
+    for _ in range(regras.AGARRADO_CHUTES):
+        ev += _passos(e, 1, correr=True) + _passos(e, 1)
+    assert "soltou" in ev and e.agarrado == 0 and e.fantoche_caida > 0 and e.pego <= 0
+    assert e.dist_fantoche() > 2.0  # empurrado para longe
+
+
+def test_agarrado_sem_reagir_ela_leva(cemiterio_mapa):
+    e = _no_cemiterio(cemiterio_mapa, x=0.0, z=10.0, acesa=False)
+    e.fantoche = [0.0, 9.0, 0.0]
+    _passos(e, int(60 * (regras.AGARRADO_TEMPO + 0.2)))
+    assert e.pego > 0 and e.quem_pegou == "fantoche"
+    e2 = _no_cemiterio(cemiterio_mapa, x=0.0, z=10.0, acesa=False, imortal=True)
+    e2.fantoche = [0.0, 9.0, 0.0]
+    _passos(e2, int(60 * (regras.AGARRADO_TEMPO + 0.2)))
+    assert e2.pego <= 0 and e2.fantoche_caida > 0  # nao morrer: ela solta
+
+
+def test_cada_monstro_tem_cinco_verdades():
+    from terror_ps1 import verdades
+    for quem in ("vulto", "pequena", "cego", "imitadora", "farejador", "fantoche"):
+        frases = verdades.VERDADES[quem]
+        assert len(frases) == verdades.ULTIMA and len(set(frases)) == verdades.ULTIMA
+        assert verdades.verdade(quem, 1) == frases[0] and verdades.verdade(quem, 9) == frases[-1]
+    assert verdades.verdade("ninguem", 1) == "" and verdades.verdade("vulto", 0) == ""
+
+
+# ---------------------------------------------------------------- a sexta noite: a escola e a Pequena
+
+@pytest.fixture(scope="module")
+def escola_mapa():
+    from terror_ps1 import escola
+    return escola.gerar_mapa()
+
+
+def test_a_escola_tem_tudo_alcancavel_pelas_portas(escola_mapa):
+    """Anda numa grade a partir do comeco (so por onde a colisao deixa) e confere que chega perto
+    de cada omamori, pilha, esconderijo e do santuario."""
+    m = escola_mapa
+    assert m.bioma == "escola" and m.tem_pequena and not m.tem_vulto and m.pequena_aparece == 1
+    passo, lim = 0.5, m.limite - 0.5
+
+    def livre(x, z):
+        px, pz = regras.colidir(x, z, m.circulos_perto(x, z), m.caixas, (-lim, lim, -lim, lim))
+        return math.hypot(px - x, pz - z) < 1e-6
+
+    def celula(x, z):
+        return round(x / passo), round(z / passo)
+
+    ini = celula(*m.inicio)
+    visto, fila = {ini}, [ini]
+    while fila:
+        i, j = fila.pop()
+        for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            c = (i + di, j + dj)
+            if c not in visto and livre(c[0] * passo, c[1] * passo):
+                visto.add(c)
+                fila.append(c)
+
+    def chega(x, z, raio):
+        return any(math.hypot(i * passo - x, j * passo - z) < raio for i, j in visto)
+
+    for x, z, _ in m.amuletos:
+        assert chega(x, z, regras.PEGAR_ITEM), (x, z)
+    for x, z in m.pilhas:
+        assert chega(x, z, regras.PEGAR_ITEM), (x, z)
+    for nome, (x, z, *_) in m.esconderijos.items():
+        assert chega(x, z, regras.ESCONDER), nome
+    assert chega(*m.santuario, 2.0)
+
+
+def test_a_pequena_vem_para_a_luz(escola_mapa):
+    e = regras.Estado(mapa=escola_mapa)
+    _passos(e, 10)
+    assert e.pequena is None  # so no primeiro omamori
+    e.coletados = 1
+    assert "pequena" in _passos(e, 1) and e.pequena is not None
+    e.x, e.z, e.giro = 0.0, 20.0, 0.0
+    e.pequena = (0.0, 30.0)  # atras de voce, fora do feixe
+    e.acesa = False
+    _passos(e, 120)
+    assert e.pequena == (0.0, 30.0)  # apagada: ela para
+    e.acesa = True
+    _passos(e, 120)
+    andou_devagar = 30.0 - e.pequena[1]
+    assert 0.5 < andou_devagar < 3.0  # acesa, mas nao nela: devagar
+    assert e.dist_ameaca() == e.dist_pequena() < 10.0
+
+
+# ---------------------------------------------------------------- a setima noite: o torii e a roda
+
+@pytest.fixture(scope="module")
+def torii_mapa():
+    from terror_ps1 import torii
+    return torii.gerar_mapa()
+
+
+def _na_roda(m, quem, **kw):
+    """Ja com a musica parada e `quem` atras de voce."""
+    e = regras.Estado(mapa=m)
+    e.x, e.z, e.giro = 0.0, 0.0, 0.0
+    e.roda, e.roda_quem, e.roda_de, e.roda_meio = "atras", quem, (0.0, 0.0, 0.0), (0.0, 0.0)
+    e.roda_falta = [q for q in regras.RODA_QUEM if q != quem]
+    e.acesa = False
+    for k, v in kw.items():
+        setattr(e, k, v)
+    return e
+
+
+def _responder(e, quem):
+    qx, qz = regras.atras_na_roda(e)
+    if quem == "vulto":
+        _mirar(e, (qx, 1.4, qz))
+        e.acesa = True
+        return _passos(e, 3)
+    if quem == "imitadora":
+        _mirar(e, (qx, 1.4, qz))
+        return _passos(e, int(60 * (regras.RODA_ENCARAR + 0.2)))
+    if quem == "pequena":
+        return _passos(e, int(60 * (regras.RODA_ESCURO + 0.2)))
+    if quem == "cego":
+        return _passos(e, int(60 * (regras.RODA_AR + 0.2)), segurar_ar=True)
+    if quem == "fantoche":
+        return _passos(e, int(60 * (regras.RODA_AGACHAR + 0.2)), agachar=True)
+    return _passos(e, 120, frente=1.0)  # o farejador: sair dali
+
+
+def test_o_torii_e_so_a_trilha_e_a_clareira(torii_mapa):
+    m = torii_mapa
+    assert m.bioma == "torii" and m.tem_roda and not m.tem_vulto and not m.amuletos and not m.esconderijos
+    assert len(m.bilhetes) == 1 + len(regras.RODA_QUEM)
+    e = regras.Estado(mapa=m)
+    assert e.roda == ""
+    e.x, e.z = 0.0, 1.0
+    assert "roda_canta" in _passos(e, 1) and e.roda == "canto" and not e.acesa
+
+
+def test_a_roda_inteira_e_o_setimo_lugar_vazio(torii_mapa):
+    e = regras.Estado(mapa=torii_mapa)
+    e.x, e.z = 0.0, 1.0
+    _passos(e, 1)
+    vistos = []
+    for _ in regras.RODA_QUEM:
+        x0, z0 = e.x, e.z
+        _passos(e, 30, frente=1.0)
+        assert (e.x, e.z) == (x0, z0)  # olhos fechados: parado
+        ev = _passos(e, int(60 * regras.RODA_CANTO))
+        assert e.roda == "atras" and "roda_para" in ev
+        vistos.append(e.roda_quem)
+        assert len(regras.roda_lugares(e)) == len(regras.RODA_QUEM) - len(vistos)  # quem esta atras nao aparece
+        assert "roda_acertou" in _responder(e, e.roda_quem), e.roda_quem
+        assert e.pego <= 0 and e.acesa and e.roda_quem in [q for q, *_ in regras.roda_lugares(e)]
+        _passos(e, int(60 * regras.RODA_MOSTRA) + 2)
+    assert sorted(vistos) == sorted(regras.RODA_QUEM) and e.roda == "vazio"
+    ev = _passos(e, int(60 * regras.RODA_CANTO) + 2)
+    assert "roda_vazia" in ev and e.roda == "fim" and e.oitavo == "altar"
+    assert len(regras.roda_lugares(e)) == len(regras.RODA_QUEM)  # os seis, e o lugar vazio
+
+
+def test_a_roda_errar_ou_demorar_e_ser_levado(torii_mapa):
+    e = _na_roda(torii_mapa, "pequena")
+    e.acesa = True  # luz acesa: ela vem
+    _passos(e, 2)
+    assert e.pego > 0 and e.quem_pegou == "pequena"
+    e = _na_roda(torii_mapa, "cego")
+    _passos(e, 20, frente=1.0)  # mexeu: ele ouviu
+    assert e.pego > 0 and e.quem_pegou == "cego"
+    e = _na_roda(torii_mapa, "fantoche")
+    _passos(e, int(60 * (regras.RODA_JANELA + 0.2)))  # nao fez nada
+    assert e.pego > 0 and e.quem_pegou == "fantoche"
+    e = _na_roda(torii_mapa, "vulto", imortal=True)
+    assert "roda_acertou" in _passos(e, int(60 * (regras.RODA_JANELA + 0.2)))  # nao morrer: segue
+    assert e.pego <= 0 and e.roda == "acertou"
+
+
+# ---------------------------------------------------------------- a noite secreta: o rio
+
+@pytest.fixture(scope="module")
+def rio_mapa():
+    from terror_ps1 import rio
+    return rio.gerar_mapa()
+
+
+def test_o_rio_nao_tem_monstro_e_ela_esta_escondida(rio_mapa):
+    m = rio_mapa
+    assert m.bioma == "rio" and m.tem_esconde and not m.tem_vulto and not m.amuletos
+    for x, z in m.esconde_lugares:  # da para chegar perto de cada esconderijo
+        px, pz = regras.colidir(x, z, m.circulos_perto(x, z), m.caixas, (-40, 40, -40, 40))
+        assert math.hypot(px - x, pz - z) < regras.ACHAR and m.chao(x, z) == 0
+    e = regras.Estado(mapa=m)
+    _passos(e, 2)
+    assert regras.ayame_escondida(e) in m.esconde_lugares and e.dist_ameaca() > 1e3  # nenhum monstro
+
+
+def test_a_luz_de_longe_nao_vale_de_perto_achei_voce(rio_mapa):
+    e = regras.Estado(mapa=rio_mapa)
+    _passos(e, 1)
+    x, z = regras.ayame_escondida(e)
+    e.x, e.z = x, z + 8.0
+    _mirar(e, (x, 0.7, z))
+    e.acesa = True
+    ev = _passos(e, 2)
+    assert "ayame_corre" in ev and e.escondida_corre is not None
+    _passos(e, 60 * 20)  # ela chega no lugar novo
+    assert e.escondida_corre is None and regras.ayame_escondida(e) != (x, z)
+    x, z = regras.ayame_escondida(e)
+    e.acesa = False
+    e.x, e.z = x + 1.0, z
+    assert regras.pode_achar(e)
+    regras.atualizar(e, 1 / 60, 0, 0, 0, False, soltar=True)
+    assert e.venceu and e.fim == "achou" and "achou" in e.eventos
+
+
+def test_depois_do_torii_quem_nunca_levou_o_oitavo_vai_para_o_rio(torii_mapa):
+    e = regras.estado_da_noite(7)
+    regras.proxima_noite(e, secreta=True)
+    assert e.noite_n == 8 and e.mapa.bioma == "rio" and not e.espelho
+    c = {"noite_n": 8, "aprendeu_base": 0.6, "memoria": {}}
+    assert regras.noite_da_campanha({**c, "levou_oitavo": False}).mapa.bioma == "rio"
+    sem = regras.noite_da_campanha({**c, "levou_oitavo": True})
+    assert sem.mapa.bioma == "floresta" and sem.espelho  # levou: o rio nao abre
+
+
+# ---------------------------------------------------------------- o pesadelo: espelhado, fogo, dois monstros
+
+def test_o_pesadelo_tem_fogo_e_dois_monstros_que_se_completam():
+    from terror_ps1 import mapa
+    for n, bioma in enumerate(regras.FASES, start=len(regras.FASES) + 1):
+        e = regras.estado_da_noite(n)
+        m = e.mapa
+        assert m.bioma == bioma and e.espelho and m.fogo and len(m.fogos) >= 6, bioma
+        if bioma == "torii":
+            continue
+        par = mapa.PARES[bioma]
+        assert {"pequena": m.tem_pequena, "fantoche": m.tem_fantoche, "vulto": m.tem_vulto,
+                "imitadora": m.tem_imitadora}[par], bioma
+        for x, z in m.fogos:  # o fogo nao fica em cima de omamori nem do comeco
+            assert all(math.hypot(x - a[0], z - a[1]) > regras.PEGAR_ITEM + 0.6 for a in m.amuletos)
+    assert not regras.estado_da_noite(2).mapa.fogo  # a noite normal continua igual
+    arrozal = regras.estado_da_noite(len(regras.FASES) + 2)
+    assert arrozal.cego is not None and arrozal.fantoche is not None
+
+
+def test_no_pesadelo_a_roda_tem_menos_tempo(torii_mapa):
+    import dataclasses
+    e = _na_roda(dataclasses.replace(torii_mapa, fogo=True), "fantoche")
+    _passos(e, int(60 * (regras.RODA_JANELA * regras.RODA_PESADELO + 0.2)))
+    assert e.pego > 0
+

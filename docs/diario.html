@@ -125,7 +125,70 @@ body.uv-on .uv { color: var(--uv); text-shadow: 0 0 6px var(--uv), 0 0 22px var(
 .esboco .uv-svg { fill: transparent; font-size: 18px; font-weight: 700; }
 body.uv-on .esboco .uv-svg { fill: var(--uv); }
 .luz.uv-btn { right: auto; left: 50%; transform: translateX(-50%); background: #1d1030; color: #d9c8ff; border-color: #8a5cff; }
-@media (prefers-reduced-motion: reduce) { .tremido { animation: none; } }
+/* --- segredos do escuro --- */
+.noite { display: none; }
+body.escuro .noite { display: inline; }
+body.escuro .dia { display: none; }
+.depois-de-ver { display: none; }
+body.visto .depois-de-ver { display: block; }
+.lapis { display: none; margin: 0 0 32px; color: var(--tinta-suave); opacity: .55; font: 24px/32px "Caveat", cursive;
+  transform: rotate(-1deg); letter-spacing: .05em; }
+body.escuro .lapis { display: block; }
+.aparicao { position: fixed; left: 0; top: 0; z-index: 9; width: 110px; height: 275px; pointer-events: none; opacity: 0; }
+.aparicao.ve { opacity: .93; }
+.aparicao.grande { z-index: 12; width: 42vh; height: 100vh; left: 50% !important; top: 0 !important;
+  transform: translateX(-50%); }
+.sombra-svg { width: 100%; height: 100%; fill: #050404; }
+.sombra-svg .olho-vermelho { fill: #ff3326; }
+.clarao { position: fixed; inset: 0; z-index: 11; background: #f4efe6; opacity: 0; pointer-events: none; }
+.clarao.ve { opacity: .9; }
+.olho-par { position: fixed; z-index: 11; width: 20px; height: 7px; pointer-events: none; opacity: 0;
+  transition: opacity .35s; background: radial-gradient(circle at 3px 3px, #ff3a2a 0 2px, transparent 3px),
+  radial-gradient(circle at 17px 3px, #ff3a2a 0 2px, transparent 3px); filter: drop-shadow(0 0 3px #ff2a1a); }
+body.escuro .olho-par.vivo { opacity: .85; }
+/* --- segredos da luz negra --- */
+.arrancada { display: none; clip-path: polygon(0 3%, 6% 0, 13% 2.5%, 21% .5%, 30% 3%, 38% 1%, 47% 3.5%, 55% .5%,
+  64% 2.5%, 72% 0, 81% 3%, 90% 1%, 100% 2.5%, 100% 100%, 0 100%); }
+body.uv-on .arrancada { display: block; }
+.uv-texto { color: transparent; font: 700 30px/40px "Caveat", cursive; padding-top: 24px; }
+body.uv-on .uv-texto { color: var(--uv); text-shadow: 0 0 6px var(--uv), 0 0 22px var(--uv-halo); }
+.uv-mao { position: absolute; left: 22px; bottom: 30px; width: 46px; z-index: 2; pointer-events: none; transform: rotate(-14deg); }
+.mao-svg { width: 100%; fill: transparent; }
+body.uv-on .mao-svg { fill: var(--uv); filter: drop-shadow(0 0 5px var(--uv)); opacity: .8; }
+/* --- o caderno queimado (o fosforo): o pesadelo --- */
+.queimada { display: none; }
+body.queimado .pagina:not(.queimada) { display: none; }
+body.queimado .pagina.queimada { display: block; }
+body.queimado { background: radial-gradient(ellipse at 50% 115%, rgba(255, 90, 20, .25), transparent 60%) fixed, #0d0806; }
+.pagina.queimada { padding: 0; background: none; box-shadow: none;
+  --papel: #d6bf92; --papel-2: #c4a26c; --tinta: #2a1a10; --tinta-suave: #5e4430; --vermelho: #8a1c0c;
+  --linha: rgba(90, 60, 30, .2); --margem: rgba(120, 40, 20, .35);
+  filter: drop-shadow(0 0 5px rgba(255, 110, 30, .5)); animation: brasa 3.4s ease-in-out infinite; }
+.folha { position: relative; padding: 46px 44px 52px 84px;
+  background: linear-gradient(90deg, transparent 63px, var(--margem) 63px 65px, transparent 65px),
+    repeating-linear-gradient(transparent 0 31px, var(--linha) 31px 32px),
+    radial-gradient(ellipse at 50% 45%, var(--papel) 40%, var(--papel-2) 75%, #7a4e24 92%, #2a1308 100%);
+  background-position: 0 0, 0 8px, 0 0; color: var(--tinta);
+  box-shadow: inset 0 0 50px rgba(80, 32, 8, .75), inset 0 0 14px rgba(25, 10, 3, .9); }
+.folha.capa { min-height: 360px; }
+.folha.ultima { min-height: 300px; display: flex; align-items: center; }
+.cinza { color: transparent; border-radius: 45% 55% 40% 60%; padding: 0 2px;
+  background: radial-gradient(ellipse, #160a04 35%, #4a2410 62%, rgba(255, 120, 30, .55) 72%, transparent 80%); }
+.furo { position: absolute; z-index: 2; pointer-events: none; border-radius: 47% 53% 41% 59% / 55% 44% 56% 45%;
+  background: radial-gradient(circle, #0d0806 0 46%, #2a0f04 54%, rgba(255, 120, 30, .85) 60%,
+    rgba(140, 60, 15, .5) 67%, transparent 74%); }
+.luz.fogo-btn { bottom: 64px; background: #2a1208; color: #ffcf9a; border-color: #c2541c; }
+.fogo-tela { position: fixed; left: 0; right: 0; bottom: 0; height: 220vh; z-index: 13; pointer-events: none;
+  opacity: 0; transform: translateY(100%);
+  background: linear-gradient(to top, #050302 0 38%, #2a0a02 46%, #a8320a 52%, #ff8a1e 56%, #ffd98a 58%,
+    rgba(255, 140, 40, .35) 62%, transparent 70%); }
+body.pegando-fogo .fogo-tela { animation: subir 2.6s ease-in forwards; }
+@keyframes subir { 0% { transform: translateY(100%); opacity: 1; } 55% { transform: translateY(-12%); opacity: 1; }
+  100% { transform: translateY(-12%); opacity: 0; } }
+@keyframes brasa { 0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 110, 30, .45)); }
+  50% { filter: drop-shadow(0 0 10px rgba(255, 140, 40, .7)); } }
+@media (prefers-reduced-motion: reduce) { .tremido { animation: none; } .pagina.queimada { animation: none; }
+  body.pegando-fogo .fogo-tela { animation: none; } }
 @media (max-width: 640px) {
   body { padding: 20px 16px 100px; font-size: 17px; }
   .pagina { padding: 32px 18px 28px 40px;
@@ -139,33 +202,36 @@ body.uv-on .esboco .uv-svg { fill: var(--uv); }
   .indice { columns: 1; }
   .rotulo { right: 16px; }
   .uv { font-size: 24px; line-height: 28px; max-width: 80%; }
+  .folha { padding: 36px 20px 40px 40px; }
+  .luz.fogo-btn { bottom: 64px; }
   .uv-2 { left: 44px; }
 }
 </style>
 </head>
 <body>
 <section class="pagina capa" id="capa">
-<p class="sub">se encontrar, devolva ao santuário</p>
+<p class="sub">se encontrar, <span class="dia">devolva</span><span class="noite">não devolva</span> ao santuário</p>
 <h1>Diário</h1>
 <p class="sub">floresta ao sul da aldeia · outono</p>
 <p class="aviso">não leia de noite</p>
-<p class="uv uv-0" aria-hidden="true">não devolve. fica comigo.</p>
+<p class="uv uv-0" aria-hidden="true">não devolve. fica comigo.</p><div class="uv-mao" aria-hidden="true"><svg viewBox="0 0 40 50" class="mao-svg"><path d="M12,48 q-8,-14 -6,-24 q1,-4 4,-1 l2,8 l0,-22 q2,-4 4,0 l1,18 l1,-22 q2,-4 4,0 l0,22 l2,-19 q2,-4 4,0 l-1,21 l4,-12 q3,-3 4,1 l-5,20 q-3,10 -12,10 z"/></svg></div>
 </section>
 <section class="pagina" id="indice"><span class="rotulo">índice</span>
 <h2>O que tem aqui</h2>
-<ol class="indice"><li><a href="#antes">Antes de entrar</a></li><li><a href="#lanterna">A lanterna</a></li><li><a href="#ele">Ele</a></li><li><a href="#ouve">O que ele ouve</a></li><li><a href="#respirar">Respirar</a></li><li><a href="#omamori">Os omamori</a></li><li><a href="#mapa">O mapa que eu fiz</a></li><li><a href="#papeis">Os papéis que achei</a></li><li><a href="#armadilhas">Armadilhas e gravetos</a></li><li><a href="#ritmo">Ele tem ritmo</a></li><li><a href="#aprende">Ele aprende</a></li><li><a href="#mente">A floresta mente</a></li><li><a href="#nomes">Os nomes</a></li><li><a href="#esconder">Esconderijos</a></li><li><a href="#camera">A câmera</a></li><li><a href="#ayame">Ayame</a></li><li><a href="#pequena">A pequena</a></li><li><a href="#noite">A lua e a chuva</a></li><li><a href="#oitavo">O oitavo</a></li><li><a href="#arrozais">Os arrozais</a></li><li><a href="#cego">O Cego</a></li><li><a href="#aldeia">A aldeia vazia</a></li><li><a href="#imitadora">A Imitadora</a></li><li><a href="#bambuzal">O bambuzal</a></li><li><a href="#farejador">O Farejador</a></li><li><a href="#terceira">A quinta noite</a></li></ol>
-<p class="nota">tudo o que está escrito aqui aconteceu. os números eu medi contando.</p>
+<ol class="indice"><li><a href="#antes">Antes de entrar</a></li><li><a href="#lanterna">A lanterna</a></li><li><a href="#ele">Ele</a></li><li><a href="#ouve">O que ele ouve</a></li><li><a href="#respirar">Respirar</a></li><li><a href="#omamori">Os omamori</a></li><li><a href="#mapa">O mapa que eu fiz</a></li><li><a href="#papeis">Os papéis que achei</a></li><li><a href="#armadilhas">Armadilhas e gravetos</a></li><li><a href="#ritmo">Ele tem ritmo</a></li><li><a href="#aprende">Ele aprende</a></li><li><a href="#mente">A floresta mente</a></li><li><a href="#nomes">Os nomes</a></li><li><a href="#esconder">Esconderijos</a></li><li><a href="#camera">A câmera</a></li><li><a href="#ayame">Ayame</a></li><li><a href="#noite">A lua e a chuva</a></li><li><a href="#oitavo">O oitavo</a></li><li><a href="#arrozais">Os arrozais</a></li><li><a href="#cego">O Cego</a></li><li><a href="#aldeia">A aldeia vazia</a></li><li><a href="#imitadora">A Imitadora</a></li><li><a href="#bambuzal">O bambuzal</a></li><li><a href="#farejador">O Farejador</a></li><li><a href="#cemiterio">O cemitério</a></li><li><a href="#fantoche">O Fantoche</a></li><li><a href="#escola">A escola</a></li><li><a href="#pequena">A pequena</a></li><li><a href="#torii">O torii</a></li><li><a href="#pesadelo">O pesadelo</a></li><li><a href="#terceira">De novo</a></li></ol>
+<p class="nota"><span class="dia">tudo</span><span class="noite">nada</span> o que está escrito aqui aconteceu. os números eu medi contando.</p>
 <p class="uv uv-0" aria-hidden="true">você já leu isso antes.</p>
 </section>
 <section class="pagina" id="antes"><span class="rotulo">véspera</span>
-<h2>Antes de entrar</h2><p>Ayame sumiu há três noites, na floresta ao sul da aldeia. Ninguém quis vir comigo. Vou anotar
+<h2>Antes de entrar</h2><p>Ayame sumiu há três noites, na floresta ao sul da aldeia. Naquela tarde a mãe deixou ela comigo.
+Ninguém quis vir comigo. Vou anotar
 tudo, porque se eu não voltar, alguém vai ter que vir depois.</p>
 <p>Levo uma lanterna de dínamo, uma câmera descartável e este caderno. O velho da venda disse que
 os omamori das crianças ficam onde elas sumiram, e que quem levar os <b>7</b> ao
 santuário antes de amanhecer "acerta a conta". Não perguntei de quê.</p>
 <p class="nota">o que o corpo sabe fazer:</p>
 <ul class="lista teclas"><li><span class="tecla">mouse</span> — olhar em volta</li><li><span class="tecla">W ou ↑</span> — ir em frente</li><li><span class="tecla">S ou ↓</span> — voltar de costas</li><li><span class="tecla">A</span> — passo para a esquerda</li><li><span class="tecla">D</span> — passo para a direita</li><li><span class="tecla">Q ou ←</span> — virar para a esquerda</li><li><span class="tecla">E ou →</span> — virar para a direita</li><li><span class="tecla">Shift</span> — correr (cansa, e faz barulho)</li><li><span class="tecla">Ctrl ou C</span> — agachar, segurando</li><li><span class="tecla">R</span> — prender o ar, segurando</li><li><span class="tecla">F ou botão direito</span> — acender e apagar a lanterna</li><li><span class="tecla">V</span> — tirar uma foto (o flash)</li><li><span class="tecla">Espaço ou botão esquerdo</span> — usar: forçar a armadilha, entrar e sair do esconderijo, deixar o oitavo</li><li><span class="tecla">F11</span> — tela cheia</li><li><span class="tecla">Esc</span> — desistir (sair)</li></ul>
-<p class="uv uv-0" aria-hidden="true">você já veio antes.</p></section>
+<p class="uv uv-0" aria-hidden="true">você já veio antes.</p><div class="uv-mao" aria-hidden="true"><svg viewBox="0 0 40 50" class="mao-svg"><path d="M12,48 q-8,-14 -6,-24 q1,-4 4,-1 l2,8 l0,-22 q2,-4 4,0 l1,18 l1,-22 q2,-4 4,0 l0,22 l2,-19 q2,-4 4,0 l-1,21 l4,-12 q3,-3 4,1 l-5,20 q-3,10 -12,10 z"/></svg></div></section>
 <section class="pagina" id="lanterna"><span class="rotulo">noite 1</span>
 <h2>A lanterna</h2><p>A pilha cheia dura uns <b>75 s</b> acesa. Apagada, o dínamo enche tudo de novo em
 <b>50 s</b>, então eu apago sempre que posso. Mas no escuro eu não vejo nada.</p>
@@ -175,7 +241,7 @@ para cada lado, até uns <b>18 m</b>. Abaixo de um quarto de carga, ela começa 
 <p>Achei <b>5</b> pilhas soltas na beira das trilhas. Cada uma devolve
 <b>50%</b> da carga.</p>
 <p class="nota">apontar para ELE gasta muito mais. encarando, a pilha cheia vira uns 21 s.</p>
-<p class="uv uv-0" aria-hidden="true">ele gosta quando a luz pisca</p></section>
+<p class="lapis" aria-hidden="true">nao olhe para tras quando ela piscar.</p><p class="uv uv-0" aria-hidden="true">ele gosta quando a luz pisca</p></section>
 <section class="pagina" id="ele"><span class="rotulo">noite 1</span>
 <h2>Ele</h2><div class="lado-a-lado"><div>
 <p>Alto demais. Magro demais. Os braços passam dos joelhos e a cabeça cai para um lado, como se o
@@ -189,7 +255,7 @@ um galho: dá para ouvir <i>de que lado</i> ele está.</p>
 as árvores quando eu apago a luz. Esses não se mexem. Não sei o que são.</p>
 <p class="nota">a 1,3 m dele, acabou. vi o rosto uma vez. não vou desenhar o rosto.</p>
 </div><svg class="esboco vulto" viewBox="0 0 170 300" role="img" aria-label="Esboco dele: alto, magro, bracos longos, cabeca caida para o lado"><path d="M60,74 q-4,10 -2,22" class="traco"/><ellipse cx="54" cy="52" rx="13" ry="22" transform="rotate(-22 54 52)" class="traco"/><path d="M47,50 l3,1 M57,46 l3,1 M51,64 q3,3 6,0" class="traco fino"/><path d="M42,96 q18,-6 36,0 l-6,90 q-12,4 -24,0 z" class="traco"/><path d="M42,98 q-10,60 -8,118 m2,0 l-4,14 m6,-14 l0,15 m4,-15 l4,13" class="traco"/><path d="M78,98 q10,60 8,118 m-2,0 l-4,14 m6,-14 l0,15 m4,-15 l4,13" class="traco"/><path d="M52,186 l-4,104 M68,186 l4,104" class="traco"/><text x="92" y="30" class="nota-svg">mais alto</text><text x="92" y="46" class="nota-svg">que a porta</text></svg></div>
-<p class="uv uv-0" aria-hidden="true">ele também procura alguém</p></section>
+<p class="lapis" aria-hidden="true">ele esta atras de voce agora.</p><p class="uv uv-0" aria-hidden="true">ele também procura alguém</p></section>
 <section class="pagina" id="ouve"><span class="rotulo">noite 2</span>
 <h2>O que ele ouve</h2><p>Ele não sabe onde eu estou. Ele <i>descobre</i>. A lanterna acesa ele vê de
 <b>30 m</b>; de <b>4,5 m</b> ele me sente, faça o que eu fizer. O resto é barulho:</p>
@@ -263,7 +329,7 @@ de verdade.</p>
 <section class="pagina" id="mente"><span class="rotulo">noite 5</span>
 <h2>A floresta mente</h2><p>Até eu pegar o primeiro omamori, a floresta é honesta. Depois, não. E ela nunca muda nada
 <b>enquanto eu estou olhando</b>.</p>
-<svg class="esboco jizos" viewBox="0 0 400 130" role="img" aria-label="A fileira de jizos: seis, depois sete, depois oito"><path d="M17,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="30" cy="46" r="10" class="traco"/><path d="M19,62 q11,10 22,0" class="tinta-vermelha"/><text x="30" y="112" text-anchor="middle" class="">Haru</text><path d="M64,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="77" cy="46" r="10" class="traco"/><path d="M66,62 q11,10 22,0" class="tinta-vermelha"/><text x="77" y="112" text-anchor="middle" class="">Sora</text><path d="M111,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="124" cy="46" r="10" class="traco"/><path d="M113,62 q11,10 22,0" class="tinta-vermelha"/><text x="124" y="112" text-anchor="middle" class="">Kenji</text><path d="M158,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="171" cy="46" r="10" class="traco"/><path d="M160,62 q11,10 22,0" class="tinta-vermelha"/><text x="171" y="112" text-anchor="middle" class="">Mei</text><path d="M205,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="218" cy="46" r="10" class="traco"/><path d="M207,62 q11,10 22,0" class="tinta-vermelha"/><text x="218" y="112" text-anchor="middle" class="">Ren</text><path d="M252,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="265" cy="46" r="10" class="traco"/><path d="M254,62 q11,10 22,0" class="tinta-vermelha"/><text x="265" y="112" text-anchor="middle" class="">Yui</text><path d="M299,90 v-30 q13,-10 26,0 v30 z" class="traco tracejado"/><circle cx="312" cy="46" r="10" class="traco tracejado"/><path d="M301,62 q11,10 22,0" class="tinta-vermelha"/><text x="312" y="112" text-anchor="middle" class="">?</text><path d="M346,90 v-30 q13,-10 26,0 v30 z" class="traco tracejado"/><circle cx="359" cy="46" r="10" class="traco tracejado"/><path d="M348,62 q11,10 22,0" class="tinta-vermelha"/><text x="359" y="112" text-anchor="middle" class="destaque">Ayame</text><text x="300" y="20" class="nota-svg">eram seis.</text></svg>
+<svg class="esboco jizos" viewBox="0 0 400 130" role="img" aria-label="A fileira de jizos: seis, depois sete, depois oito"><path d="M17,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="30" cy="46" r="10" class="traco"/><path d="M19,62 q11,10 22,0" class="tinta-vermelha"/><text x="30" y="112" text-anchor="middle" class="">Haru</text><path d="M64,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="77" cy="46" r="10" class="traco"/><path d="M66,62 q11,10 22,0" class="tinta-vermelha"/><text x="77" y="112" text-anchor="middle" class="">Sora</text><path d="M111,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="124" cy="46" r="10" class="traco"/><path d="M113,62 q11,10 22,0" class="tinta-vermelha"/><text x="124" y="112" text-anchor="middle" class="">Kenji</text><path d="M158,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="171" cy="46" r="10" class="traco"/><path d="M160,62 q11,10 22,0" class="tinta-vermelha"/><text x="171" y="112" text-anchor="middle" class="">Mei</text><path d="M205,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="218" cy="46" r="10" class="traco"/><path d="M207,62 q11,10 22,0" class="tinta-vermelha"/><text x="218" y="112" text-anchor="middle" class="">Ren</text><path d="M252,90 v-30 q13,-10 26,0 v30 z" class="traco"/><circle cx="265" cy="46" r="10" class="traco"/><path d="M254,62 q11,10 22,0" class="tinta-vermelha"/><text x="265" y="112" text-anchor="middle" class="">Yui</text><path d="M299,90 v-30 q13,-10 26,0 v30 z" class="traco tracejado"/><circle cx="312" cy="46" r="10" class="traco tracejado"/><path d="M301,62 q11,10 22,0" class="tinta-vermelha"/><text x="312" y="112" text-anchor="middle" class="">?</text><path d="M346,90 v-30 q13,-10 26,0 v30 z" class="traco tracejado"/><circle cx="359" cy="46" r="10" class="traco tracejado"/><path d="M348,62 q11,10 22,0" class="tinta-vermelha"/><text x="359" y="112" text-anchor="middle" class="destaque">Ayame</text><text x="300" y="20" class="nota-svg">eram seis.</text><text x="20" y="22" class="uv-svg">|||| |   |||| ||   |||| |||</text><text x="20" y="126" class="uv-svg">conta de novo</text></svg>
 <ul class="lista">
 <li>Os jizos se viram para mim quando eu não estou olhando.</li>
 <li>Eram seis. Com 3 omamori comigo, eram sete. Com 5, oito.</li>
@@ -273,13 +339,13 @@ de verdade.</p>
 eu nunca fui.</li>
 </ul>
 <p class="nota">não siga as pegadas.</p>
-<p class="uv uv-0" aria-hidden="true">as pegadas são suas. da outra vez.</p></section>
+<p class="lapis" aria-hidden="true">conte as paginas deste caderno. conte de novo.</p><p class="uv uv-0" aria-hidden="true">as pegadas são suas. da outra vez.</p></section>
 <section class="pagina" id="nomes"><span class="rotulo">noite 5</span>
 <h2>Os nomes</h2><p>Os jizos têm nomes escritos na base. Só dá para ler de perto, com a luz.</p>
 <ol class="lista nomes"><li>Haru</li><li>Sora</li><li>Kenji</li><li>Mei</li><li>Ren</li><li>Yui</li></ol>
 <p>O sétimo é uma pedra lisa, sem nome. <i>Ainda.</i></p>
-<p>O oitavo diz <b class="vermelho">Ayame</b>.</p>
-<p class="uv uv-0" aria-hidden="true">o sétimo é o seu</p></section>
+<p>O oitavo diz <span class="dia"><b class="vermelho">Ayame</b>.</span><span class="noite"><b class="vermelho">o meu nome</b>.</span></p>
+<p class="uv uv-0" aria-hidden="true">o sétimo é o seu</p><div class="uv-mao" aria-hidden="true"><svg viewBox="0 0 40 50" class="mao-svg"><path d="M12,48 q-8,-14 -6,-24 q1,-4 4,-1 l2,8 l0,-22 q2,-4 4,0 l1,18 l1,-22 q2,-4 4,0 l0,22 l2,-19 q2,-4 4,0 l-1,21 l4,-12 q3,-3 4,1 l-5,20 q-3,10 -12,10 z"/></svg></div></section>
 <section class="pagina" id="esconder"><span class="rotulo">noite 6</span>
 <h2>Esconderijos</h2><p>Achei três lugares para sumir: atras da mesa, dentro do poco, na barraca caida. Entro e saio com a mesma tecla de forçar a
 armadilha.</p>
@@ -289,7 +355,7 @@ acesa lá dentro também me entrega.</p>
 <p>Uma hora ele vem conferir. Se ele chegar a <b>2,5 m</b> e eu estiver
 respirando, ele me acha. <b>Prender o ar</b> é o que me salvou.</p>
 <p class="nota">ele lembra. na noite seguinte, o lugar onde eu me escondi não serve mais.</p>
-<p class="uv uv-0" aria-hidden="true">o poço é meu. não entra.</p></section>
+<p class="lapis" aria-hidden="true">ele ja sabe onde voce vai se esconder.</p><p class="uv uv-0" aria-hidden="true">o poço é meu. não entra.</p></section>
 <section class="pagina" id="camera"><span class="rotulo">noite 6</span>
 <h2>A câmera</h2><p>Uma câmera descartável com <b>6</b> fotos. O flash cega ele por uns
 <b>3 s</b> se ele estiver na frente, até <b>15 m</b>, num cone de
@@ -306,15 +372,7 @@ quando está tudo calmo, e longe.</p>
 lugar. Quase sempre (60% das vezes que eu anotei) é um omamori.
 As outras vezes é uma armadilha.</p>
 <p class="nota">os passinhos dela vêm do lado em que ela está.</p>
-<p class="uv uv-0" aria-hidden="true">por que você não corre mais rápido?</p></section>
-<section class="pagina" id="pequena"><span class="rotulo">noite 7</span>
-<h2>A pequena</h2><p>Depois do 5º omamori apareceu outra coisa. Pequena, de quatro, os braços
-compridos para a frente. Ela é o contrário dele: <b>só anda quando a luz está nela</b>. A lanterna e
-o flash: tudo é luz.</p>
-<p>Ele só anda quando a luz <i>não</i> está nele. Ela só anda quando está. Não existe jeito certo de
-segurar a lanterna. Quando ela se mexe, as juntas estalam.</p>
-<p class="nota">a 1 m dela, acabou também.</p>
-<p class="uv uv-0" aria-hidden="true">ela não sou eu</p></section>
+<p class="uv uv-0" aria-hidden="true">por que você não corre mais rápido?</p><div class="uv-mao" aria-hidden="true"><svg viewBox="0 0 40 50" class="mao-svg"><path d="M12,48 q-8,-14 -6,-24 q1,-4 4,-1 l2,8 l0,-22 q2,-4 4,0 l1,18 l1,-22 q2,-4 4,0 l0,22 l2,-19 q2,-4 4,0 l-1,21 l4,-12 q3,-3 4,1 l-5,20 q-3,10 -12,10 z"/></svg></div></section>
 <section class="pagina" id="noite"><span class="rotulo">noite 8</span>
 <h2>A lua e a chuva</h2><p>A noite piora. Em uns 15 minutos a lua se põe e a neblina fecha.</p>
 <p>No meio da noite (entre 4 e 7 minutos)
@@ -372,7 +430,7 @@ onde Ayame morava: na parede, um desenho da família. Cinco pessoas. Nós éramo
 <b>12 m</b>, ela corre. Rápido. Mais rápido que eu.</p>
 <p>Ela esquece de quem some: se eu me escondo, quando eu saio ela não está mais lá.</p>
 <p class="nota">recuar sem tirar os olhos dela. dar a volta pela outra rua.</p>
-<p class="uv uv-0" aria-hidden="true">eu nunca chorei. nunca.</p></section>
+<p class="lapis" aria-hidden="true">a de verdade nunca escreveu neste caderno.</p><p class="uv uv-0" aria-hidden="true">eu nunca chorei. nunca.</p></section>
 <section class="pagina" id="bambuzal"><span class="rotulo">quarta noite</span>
 <h2>O bambuzal</h2><p>Um bambuzal fechado, com trilhas estreitas. A cabana do cortador, o forno de carvão, uma cabeça
 de pedra caída de lado, a clareira das lanternas, o sino.</p>
@@ -392,44 +450,245 @@ seca, e ele não quer.</p>
 <p>Quando eu paro de sangrar, ele chega na última gota e se perde. Escondido sem sangrar, ele passa
 do lado. Escondido sangrando, o rastro leva até a porta.</p>
 <p class="nota">dá para ouvir ele farejando, do lado em que está.</p>
-<p class="uv uv-0" aria-hidden="true">ele lambe devagar. sem pressa.</p></section>
-<section class="pagina" id="terceira"><span class="rotulo">quinta noite</span>
-<h2>A quinta noite</h2><p>A floresta de novo. Mas <b>ao contrário</b>: a esquerda era a direita.
+<p class="uv uv-0" aria-hidden="true">ele lambe devagar. sem pressa.</p><div class="uv-mao" aria-hidden="true"><svg viewBox="0 0 40 50" class="mao-svg"><path d="M12,48 q-8,-14 -6,-24 q1,-4 4,-1 l2,8 l0,-22 q2,-4 4,0 l1,18 l1,-22 q2,-4 4,0 l0,22 l2,-19 q2,-4 4,0 l-1,21 l4,-12 q3,-3 4,1 l-5,20 q-3,10 -12,10 z"/></svg></div></section>
+<section class="pagina" id="cemiterio"><span class="rotulo">quinta noite</span>
+<h2>O cemitério</h2><p>O cemitério do templo. Fileiras e fileiras de túmulos de pedra, as tábuas de madeira atrás,
+o portão velho, o crematório, a casa do zelador, o salgueiro, o poço, o ossuário. E o túmulo dos
+Mori: cinco nomes. Um deles ainda sem data.</p>
+<p><b>Aqui não tem onde se esconder.</b> Não adiantaria: ela sabe onde eu estou.</p>
+<p>Na porta do crematório tinha uma mulher deitada de bruços, de quimono de luto. Quando eu peguei
+o primeiro omamori, ela levantou.</p>
+<p class="nota">daqui até o amanhecer não há saída. fechar os olhos não adianta. acordar também não.</p>
+<p class="uv uv-0" aria-hidden="true">o quinto nome é o seu</p></section>
+<section class="pagina" id="fantoche"><span class="rotulo">quinta noite</span>
+<h2>O Fantoche</h2><p>Ela não anda. <b>É andada.</b> Agarrada nas costas dela tem uma coisa pálida, encolhida, com dedos
+compridos por cima dos ombros dela. A coisa é que olha. A coisa é que sabe.</p>
+<p>Ela vem sempre na minha direção, a 1,5 m/s: mais devagar que eu andando, mas
+carregando omamori eu fico mais lento que ela. Ela <b>vira devagar</b>. Quando eu fico de lado, ela
+para e só gira.</p>
+<p>A luz no rosto dela não faz nada: a morta não sente. <b>A luz tem que pegar a coisa, nas costas.</b>
+Aí ela cai, e fica uns <b>18 s</b> no chão, até a coisa levantar ela de novo.
+Quem passa correndo do lado dela fica atrás.</p>
+<p>Se ela me agarrar, eu caio. Primeiro <b>segurar abaixado</b>, para ela não me levantar. Depois
+<b>chutar, chutar, chutar</b> (8 chutes, correr) antes de <b>5 s</b>.
+Quando eu soltei, ela caiu.</p>
+<p class="nota">cada vez que um deles me pega, eu lembro de mais uma coisa. na quinta vez, de tudo.</p>
+<p class="lapis" aria-hidden="true">nao olhe para as costas dela por muito tempo. a coisa olha de volta.</p><p class="uv uv-0" aria-hidden="true">ela me carregou no colo. antes.</p><div class="uv-mao" aria-hidden="true"><svg viewBox="0 0 40 50" class="mao-svg"><path d="M12,48 q-8,-14 -6,-24 q1,-4 4,-1 l2,8 l0,-22 q2,-4 4,0 l1,18 l1,-22 q2,-4 4,0 l0,22 l2,-19 q2,-4 4,0 l-1,21 l4,-12 q3,-3 4,1 l-5,20 q-3,10 -12,10 z"/></svg></div></section>
+<section class="pagina" id="escola"><span class="rotulo">sexta noite</span>
+<h2>A escola</h2><p>A escola primária da aldeia. O pátio de terra, o balanço, a coelheira vazia, o ginásio trancado,
+a piscina sem água. E o prédio de madeira: o corredor comprido, a sapateira, a enfermaria, as
+salas, a sala de música. O relógio da frente parou. Atrás do prédio, o santuário.</p>
+<p>Lá dentro é escuro de verdade. A placa de saída, verde, é a única luz que ficou.</p>
+<p>Para sumir: no armario de limpeza, embaixo da mesa do professor, atras do piano.</p>
+<p class="nota">na sala 2-1 falta uma carteira.</p>
+<p class="uv uv-0" aria-hidden="true">a carteira que falta é a minha</p></section>
+<section class="pagina" id="pequena"><span class="rotulo">sexta noite</span>
+<h2>A pequena</h2><p>Os mais velhos falam de outra criança que sumiu antes da Ayame. Ninguém foi procurar. Ela ainda
+está na escola: pequena, de quatro, os braços compridos para a frente. Apareceu quando eu peguei o
+primeiro omamori.</p>
+<p>Ela tem medo do escuro. <b>Ela vem para a luz.</b> Com a lanterna acesa, ela vem devagar, de onde
+estiver, e passa pelas paredes. Se a luz pega nela, ela vem correndo. Apaguei, e ela parou.</p>
+<p>Mas no escuro eu também não enxergo nada. Acender, olhar, apagar. Quando ela se mexe, as juntas
+estalam: é por ali que ela está.</p>
+<p class="nota">a 1 m dela, acabou.</p>
+<p class="lapis" aria-hidden="true">ela nao quer te pegar. quer a sua lanterna.</p><p class="uv uv-0" aria-hidden="true">ela não sou eu</p></section>
+<section class="pagina" id="torii"><span class="rotulo">sétima noite</span>
+<h2>O torii</h2><p>A clareira. O torii onde eu contei até dez. Em volta, sete pedras pequenas com babador vermelho.
+Seis. No lugar da sétima, só terra.</p>
+<p>Não tem omamori para achar. Quando eu cheguei no meio, <b>eles fecharam a roda</b>: os seis,
+de mãos dadas, girando em volta de mim. Cantando. Eu fechei os olhos.</p>
+<p>Quando a música para, um deles está <b>atrás de mim</b>. De olhos fechados, só dá para saber
+quem é pelo som. E cada um quer uma coisa:</p>
+<ul class="lista"><li>Se quebrar um galho atras de voce, e ele. Acenda a luz nele.</li><li>Se forem passos pesados, e o Cego. Nao se mexa. Prenda o ar.</li><li>Se for choro, e a falsa. Vire e olhe para ela.</li><li>Se farejar, e o Farejador. Saia de onde voce esta.</li><li>Se gemer, e ela, a de luto. Segure abaixado.</li><li>Se as juntas estalarem, e a pequena. Fique no escuro.</li></ul>
+<p>Demorar mais que <b>7 s</b> também é errar.</p>
+<p class="nota">na última volta, atrás de mim não tinha ninguém.</p>
+<p class="lapis" aria-hidden="true">o setimo lugar e o seu.</p><p class="uv uv-0" aria-hidden="true">um. dois. três. ainda tô contando.</p></section>
+<section class="pagina" id="pesadelo"><span class="rotulo">depois</span>
+<h2>O pesadelo</h2><p>Depois do fim, eu voltei. Tudo de novo, mas <b>ao contrário</b>, e pegando fogo. E agora eles
+não vêm sozinhos: cada noite tem dois, e um completa o outro. Fugir de um é se entregar ao outro.</p>
+<ul class="lista"><li>Ele e a pequena: a luz segura ele e chama ela.</li><li>O Cego e ela, a de luto: para ficar atras dela e preciso correr, e o Cego ouve.</li><li>A falsa e ele: encarar ela e dar as costas para o escuro.</li><li>O Farejador e a pequena: no escuro voce pisa nos tocos e sangra; com luz, ela vem.</li><li>Ela, a de luto, e a falsa: ficar atras de uma e dar as costas para a outra.</li><li>A pequena e ela, a de luto: apagar para uma, acender nas costas da outra.</li><li>A roda: a mesma, com menos tempo para responder.</li></ul>
+<p class="nota">o fogo não queima. só ilumina o que eu não queria ver.</p>
+<p class="uv uv-0" aria-hidden="true">a gente nunca parou de brincar</p></section>
+<section class="pagina" id="terceira"><span class="rotulo">depois</span>
+<h2>De novo</h2><p>A floresta de novo. Mas <b>ao contrário</b>: a esquerda era a direita.
 O meu mapa não servia mais.</p>
 <p>Tinha um jizo na entrada. Ele não esperou: não teve calma no começo. Ele já sabia girar a luz
 contra mim (ele começa sabendo, no mínimo, o que aprendeu antes). Ele lembrava onde eu tinha me
 escondido.</p>
 <p class="nota">ele lembra de tudo o que eu fiz.</p>
 <p class="uv uv-0" aria-hidden="true">de novo</p></section>
+<section class="pagina arrancada" id="arrancada" aria-label="pagina arrancada">
+<span class="rotulo">a pagina que eu arranquei</span>
+<div class="uv-texto">
+<p>Nao vim buscar a Ayame. Vim devolver.</p>
+<p>Naquela noite a gente brincou de esconde-esconde na floresta. Eu contei ate dez, de olhos fechados,
+encostado no torii.</p>
+<p>Ela nao voltou.</p>
+<p>Eu fui para casa e nao contei para ninguem.</p>
+<p>O oitavo omamori e o dela. Ela me deu "para voce me achar depois".</p>
+<p>Quem deve na conta da floresta sou eu. Se eu deixar o oitavo no altar todas as noites, talvez
+o rio me deixe passar.</p>
+<p>Na margem do rio, no escuro, ela cantarola a musica da roda. Se a luz achar ela de longe, nao vale.
+Tem que chegar perto, e dizer.</p>
+</div>
+</section>
 <section class="pagina ultima" id="ultima"><div class="outra-letra">
 <p>Achei este caderno na mesa da cabana, debaixo do diário do guarda.</p>
 <p>A letra é a minha.</p>
 <p>Eu não me lembro de ter escrito nada disso.</p>
-<p>No altar havia oito omamori. Eu trouxe sete.</p>
+<p>No altar havia oito omamori. Eu trouxe <span class="dia">sete</span><span class="noite">oito</span>.</p>
+<p class="depois-de-ver">Ele estava atrás de você.</p>
 </div>
-<p class="uv uv-0" aria-hidden="true">acorda</p></section>
+<p class="uv uv-0" aria-hidden="true">acorda</p><div class="uv-mao" aria-hidden="true"><svg viewBox="0 0 40 50" class="mao-svg"><path d="M12,48 q-8,-14 -6,-24 q1,-4 4,-1 l2,8 l0,-22 q2,-4 4,0 l1,18 l1,-22 q2,-4 4,0 l0,22 l2,-19 q2,-4 4,0 l-1,21 l4,-12 q3,-3 4,1 l-5,20 q-3,10 -12,10 z"/></svg></div></section>
+<section class="pagina queimada" id="q-capa"><div class="folha capa" style="clip-path: polygon(0.0% 1.3%, 7.1% 0.8%, 14.3% 2.0%, 21.4% 1.0%, 28.6% 2.3%, 35.7% 1.2%, 42.9% 0.3%, 50.0% 0.8%, 57.1% 1.5%, 64.3% 0.7%, 71.4% 2.9%, 78.6% 0.4%, 85.7% 0.6%, 92.9% 1.9%, 100.0% 1.8%, 99.1% 7.1%, 98.7% 14.3%, 99.0% 21.4%, 98.8% 28.6%, 98.6% 35.7%, 100.0% 42.9%, 97.9% 50.0%, 100.0% 57.1%, 99.7% 64.3%, 99.8% 71.4%, 98.5% 78.6%, 98.4% 85.7%, 100.0% 92.9%, 98.1% 100.0%, 92.9% 97.4%, 85.7% 97.4%, 78.6% 98.0%, 71.4% 98.7%, 64.3% 97.7%, 57.1% 98.9%, 50.0% 96.4%, 42.9% 96.5%, 35.7% 96.4%, 28.6% 96.5%, 21.4% 97.0%, 14.3% 100.0%, 7.1% 99.3%, 0.0% 97.5%, 0.3% 92.9%, 0.6% 85.7%, 0.9% 78.6%, 0.8% 71.4%, 1.4% 64.3%, 2.3% 57.1%, 0.8% 50.0%, 1.0% 42.9%, 0.5% 35.7%, 1.4% 28.6%, 2.4% 21.4%, 0.7% 14.3%, 1.1% 7.1%)"><h1>Diário</h1>
+<p class="sub">o que sobrou</p>
+<p class="aviso">o fogo não queima. ele mostra.</p><span class="furo" style="left: -1.2%; top: 23.3%; width: 44px; height: 33px"></span></div></section>
+<section class="pagina queimada" id="q-floresta"><div class="folha" style="clip-path: polygon(0.0% 1.0%, 7.1% 0.9%, 14.3% 0.8%, 21.4% 2.9%, 28.6% 3.2%, 35.7% 0.2%, 42.9% 0.2%, 50.0% 0.1%, 57.1% 0.2%, 64.3% 1.9%, 71.4% 0.8%, 78.6% 0.5%, 85.7% 0.2%, 92.9% 1.1%, 100.0% 1.8%, 97.7% 7.1%, 99.5% 14.3%, 99.4% 21.4%, 98.6% 28.6%, 98.3% 35.7%, 99.6% 42.9%, 97.9% 50.0%, 98.8% 57.1%, 99.7% 64.3%, 99.3% 71.4%, 99.9% 78.6%, 99.0% 85.7%, 98.1% 92.9%, 99.2% 100.0%, 92.9% 99.9%, 85.7% 97.1%, 78.6% 98.1%, 71.4% 98.4%, 64.3% 96.5%, 57.1% 99.5%, 50.0% 96.2%, 42.9% 98.1%, 35.7% 96.3%, 28.6% 97.7%, 21.4% 96.4%, 14.3% 99.6%, 7.1% 96.5%, 0.0% 96.3%, 0.7% 92.9%, 1.1% 85.7%, 2.3% 78.6%, 0.6% 71.4%, 0.4% 64.3%, 0.1% 57.1%, 1.1% 50.0%, 0.6% 42.9%, 1.5% 35.7%, 2.2% 28.6%, 0.0% 21.4%, 1.6% 14.3%, 2.3% 7.1%)"><span class="rotulo">pesadelo · 1</span>
+<h2>A floresta pegando fogo</h2><p><b>Ele e a pequena: a luz segura ele e chama ela.</b></p>
+<p>Tudo ao contrário: a esquerda era a direita. As árvores queimando dos dois lados da trilha, e o fogo
+não <span class="cinza" aria-label="queimado">esquentava</span>. Ele estava lá, como sempre. E no 2º omamori, ela também.</p>
+<p>Ele só anda fora da luz. Ela vem para a luz, e com a luz nela vem correndo. Acender, achar ele,
+apagar antes que ela chegue. Nunca deixar a luz <span class="cinza" aria-label="queimado">parada</span>.</p><span class="furo" style="right: -2.2%; top: 18.5%; width: 44px; height: 44px"></span><span class="furo" style="left: -2.4%; top: 63.0%; width: 34px; height: 55px"></span><span class="furo" style="left: 0.1%; top: 65.8%; width: 36px; height: 31px"></span></div></section>
+<section class="pagina queimada" id="q-arrozal"><div class="folha" style="clip-path: polygon(0.0% 1.0%, 7.1% 0.0%, 14.3% 1.8%, 21.4% 1.9%, 28.6% 0.5%, 35.7% 2.5%, 42.9% 1.3%, 50.0% 2.1%, 57.1% 1.7%, 64.3% 1.2%, 71.4% 1.7%, 78.6% 0.9%, 85.7% 3.2%, 92.9% 1.6%, 100.0% 1.1%, 99.7% 7.1%, 99.2% 14.3%, 99.0% 21.4%, 98.6% 28.6%, 98.0% 35.7%, 99.5% 42.9%, 98.8% 50.0%, 97.8% 57.1%, 99.7% 64.3%, 98.7% 71.4%, 98.4% 78.6%, 99.8% 85.7%, 98.9% 92.9%, 98.5% 100.0%, 92.9% 97.7%, 85.7% 99.0%, 78.6% 97.9%, 71.4% 98.4%, 64.3% 99.5%, 57.1% 98.1%, 50.0% 97.5%, 42.9% 99.1%, 35.7% 99.5%, 28.6% 98.1%, 21.4% 97.0%, 14.3% 99.3%, 7.1% 99.6%, 0.0% 99.3%, 1.6% 92.9%, 1.1% 85.7%, 1.7% 78.6%, 1.2% 71.4%, 0.7% 64.3%, 1.1% 57.1%, 0.1% 50.0%, 1.0% 42.9%, 1.6% 35.7%, 0.9% 28.6%, 0.8% 21.4%, 1.8% 14.3%, 1.4% 7.1%)"><span class="rotulo">pesadelo · 2</span>
+<h2>Os arrozais em chamas</h2><p><b>O Cego e ela, a de luto: para ficar atras dela e preciso correr, e o Cego ouve.</b></p>
+<p>Os diques queimando, e a água devolvendo o fogo. Ela, a de luto, deitada no fim do campo até eu
+pegar o primeiro omamori. Depois ela vem, sempre, a 1,5 m/s, e só cai com a luz na
+coisa nas costas.</p>
+<p>Para ficar atrás dela eu tenho que correr em volta. Correndo, ele me ouve de
+<b>25,6 m</b>. Na água, <span class="cinza" aria-label="queimado">pior</span>.</p><span class="furo" style="right: -2.1%; top: 41.7%; width: 36px; height: 47px"></span></div></section>
+<section class="pagina queimada" id="q-aldeia"><div class="folha" style="clip-path: polygon(0.0% 0.7%, 7.1% 1.4%, 14.3% 2.0%, 21.4% 2.0%, 28.6% 2.9%, 35.7% 1.7%, 42.9% 0.4%, 50.0% 3.0%, 57.1% 2.6%, 64.3% 2.7%, 71.4% 1.3%, 78.6% 0.5%, 85.7% 0.2%, 92.9% 0.2%, 100.0% 2.3%, 98.9% 7.1%, 99.4% 14.3%, 99.4% 21.4%, 98.9% 28.6%, 97.8% 35.7%, 97.7% 42.9%, 99.6% 50.0%, 98.3% 57.1%, 97.8% 64.3%, 98.5% 71.4%, 99.9% 78.6%, 99.2% 85.7%, 97.7% 92.9%, 99.0% 100.0%, 92.9% 99.4%, 85.7% 97.0%, 78.6% 97.4%, 71.4% 96.3%, 64.3% 98.7%, 57.1% 98.6%, 50.0% 99.0%, 42.9% 98.0%, 35.7% 98.0%, 28.6% 99.3%, 21.4% 97.1%, 14.3% 98.2%, 7.1% 98.2%, 0.0% 98.2%, 0.7% 92.9%, 2.1% 85.7%, 1.3% 78.6%, 1.2% 71.4%, 0.8% 64.3%, 2.2% 57.1%, 2.2% 50.0%, 0.1% 42.9%, 1.2% 35.7%, 2.1% 28.6%, 2.3% 21.4%, 0.4% 14.3%, 0.7% 7.1%)"><span class="rotulo">pesadelo · 3</span>
+<h2>A aldeia queimando</h2><p><b>A falsa e ele: encarar ela e dar as costas para o escuro.</b></p>
+<p>As lanternas de papel pegando fogo uma por uma. A falsa parada no meio da rua, chorando. Se eu
+desviar o olho com ela perto, ela corre. Então eu olho. E enquanto eu olho para ela, ele anda: atrás
+de mim, no <span class="cinza" aria-label="queimado">escuro</span>, onde a lanterna não está.</p>
+<p class="nota">andar de costas. olhar para ela. ouvir o galho.</p><span class="furo" style="right: -1.2%; top: 58.2%; width: 55px; height: 46px"></span></div></section>
+<section class="pagina queimada" id="q-bambuzal"><div class="folha" style="clip-path: polygon(0.0% 1.4%, 7.1% 1.8%, 14.3% 2.8%, 21.4% 2.3%, 28.6% 2.8%, 35.7% 2.0%, 42.9% 3.2%, 50.0% 2.6%, 57.1% 0.8%, 64.3% 3.1%, 71.4% 1.7%, 78.6% 0.6%, 85.7% 0.3%, 92.9% 1.2%, 100.0% 1.6%, 98.5% 7.1%, 98.6% 14.3%, 99.8% 21.4%, 100.0% 28.6%, 99.6% 35.7%, 98.0% 42.9%, 99.4% 50.0%, 97.7% 57.1%, 98.8% 64.3%, 99.5% 71.4%, 99.7% 78.6%, 98.4% 85.7%, 98.2% 92.9%, 99.2% 100.0%, 92.9% 99.5%, 85.7% 96.1%, 78.6% 97.6%, 71.4% 99.0%, 64.3% 99.5%, 57.1% 96.6%, 50.0% 97.2%, 42.9% 96.7%, 35.7% 98.2%, 28.6% 98.6%, 21.4% 98.6%, 14.3% 97.2%, 7.1% 96.0%, 0.0% 99.7%, 0.1% 92.9%, 1.9% 85.7%, 2.0% 78.6%, 1.1% 71.4%, 0.8% 64.3%, 1.1% 57.1%, 1.7% 50.0%, 1.8% 42.9%, 0.1% 35.7%, 0.8% 28.6%, 1.3% 21.4%, 1.7% 14.3%, 1.3% 7.1%)"><span class="rotulo">pesadelo · 4</span>
+<h2>A trilha de cinzas</h2><p><b>O Farejador e a pequena: no escuro voce pisa nos tocos e sangra; com luz, ela vem.</b></p>
+<p>Os tocos em ponta no chão. Com a luz eu vejo e desvio, mas a luz chama a pequena. No escuro eu
+piso, corto, e sangro <b>14 s</b>; o Farejador lambe cada <span class="cinza" aria-label="queimado">gota</span>, na ordem.</p><span class="furo" style="left: -0.4%; top: 43.7%; width: 42px; height: 54px"></span><span class="furo" style="right: -2.7%; top: 29.6%; width: 62px; height: 41px"></span></div></section>
+<section class="pagina queimada" id="q-cemiterio"><div class="folha" style="clip-path: polygon(0.0% 2.4%, 7.1% 1.7%, 14.3% 1.8%, 21.4% 0.1%, 28.6% 0.1%, 35.7% 3.1%, 42.9% 3.0%, 50.0% 1.6%, 57.1% 2.5%, 64.3% 0.4%, 71.4% 3.2%, 78.6% 2.8%, 85.7% 2.7%, 92.9% 1.5%, 100.0% 1.6%, 98.3% 7.1%, 99.8% 14.3%, 98.1% 21.4%, 98.4% 28.6%, 99.9% 35.7%, 99.0% 42.9%, 98.1% 50.0%, 98.8% 57.1%, 98.8% 64.3%, 99.0% 71.4%, 98.1% 78.6%, 98.4% 85.7%, 97.9% 92.9%, 99.1% 100.0%, 92.9% 97.4%, 85.7% 99.7%, 78.6% 97.2%, 71.4% 96.7%, 64.3% 98.4%, 57.1% 98.2%, 50.0% 96.0%, 42.9% 99.5%, 35.7% 96.0%, 28.6% 97.7%, 21.4% 99.3%, 14.3% 99.8%, 7.1% 97.5%, 0.0% 96.2%, 0.7% 92.9%, 1.6% 85.7%, 0.8% 78.6%, 1.7% 71.4%, 2.0% 64.3%, 1.4% 57.1%, 2.1% 50.0%, 1.8% 42.9%, 0.4% 35.7%, 0.4% 28.6%, 1.9% 21.4%, 1.1% 14.3%, 0.6% 7.1%)"><span class="rotulo">pesadelo · 5</span>
+<h2>As duas</h2><p><b>Ela, a de luto, e a falsa: ficar atras de uma e dar as costas para a outra.</b></p>
+<p>Os túmulos queimando como velas. Para derrubar a de luto eu tenho que ficar atrás dela. E aí eu
+dou as costas para a falsa. Uma das duas sempre está <span class="cinza" aria-label="queimado">atrás</span> de mim.</p><span class="furo" style="left: -1.3%; top: 67.1%; width: 51px; height: 35px"></span></div></section>
+<section class="pagina queimada" id="q-escola"><div class="folha" style="clip-path: polygon(0.0% 0.5%, 7.1% 0.1%, 14.3% 0.1%, 21.4% 0.1%, 28.6% 2.5%, 35.7% 0.8%, 42.9% 2.3%, 50.0% 2.5%, 57.1% 0.0%, 64.3% 1.9%, 71.4% 0.3%, 78.6% 1.6%, 85.7% 2.1%, 92.9% 0.6%, 100.0% 2.7%, 99.5% 7.1%, 99.7% 14.3%, 99.2% 21.4%, 98.3% 28.6%, 98.2% 35.7%, 99.4% 42.9%, 99.1% 50.0%, 99.2% 57.1%, 98.4% 64.3%, 98.4% 71.4%, 97.9% 78.6%, 97.9% 85.7%, 99.1% 92.9%, 99.1% 100.0%, 92.9% 98.3%, 85.7% 97.8%, 78.6% 99.1%, 71.4% 96.9%, 64.3% 99.4%, 57.1% 96.3%, 50.0% 96.2%, 42.9% 97.9%, 35.7% 96.8%, 28.6% 98.4%, 21.4% 96.2%, 14.3% 97.7%, 7.1% 97.3%, 0.0% 99.5%, 1.7% 92.9%, 1.2% 85.7%, 2.4% 78.6%, 0.9% 71.4%, 0.5% 64.3%, 2.0% 57.1%, 2.2% 50.0%, 1.8% 42.9%, 2.0% 35.7%, 0.2% 28.6%, 0.1% 21.4%, 0.1% 14.3%, 1.2% 7.1%)"><span class="rotulo">pesadelo · 6</span>
+<h2>A escola em chamas</h2><p><b>A pequena e ela, a de luto: apagar para uma, acender nas costas da outra.</b></p>
+<p>Apagar a luz para a pequena parar. Acender nas costas da de luto para ela cair. Nunca as duas ao
+mesmo tempo. O corredor de madeira estala, e eu não sei mais se são as juntas dela ou o <span class="cinza" aria-label="queimado">fogo</span>.</p><span class="furo" style="right: -1.6%; top: 20.6%; width: 44px; height: 47px"></span><span class="furo" style="left: -0.4%; top: 37.6%; width: 37px; height: 32px"></span><span class="furo" style="right: -1.0%; top: 13.3%; width: 47px; height: 40px"></span></div></section>
+<section class="pagina queimada" id="q-torii"><div class="folha" style="clip-path: polygon(0.0% 2.0%, 7.1% 0.4%, 14.3% 3.0%, 21.4% 1.3%, 28.6% 2.5%, 35.7% 0.4%, 42.9% 1.9%, 50.0% 2.5%, 57.1% 1.9%, 64.3% 1.5%, 71.4% 0.3%, 78.6% 2.2%, 85.7% 2.9%, 92.9% 0.2%, 100.0% 1.8%, 99.0% 7.1%, 98.3% 14.3%, 98.3% 21.4%, 99.8% 28.6%, 98.8% 35.7%, 98.8% 42.9%, 99.2% 50.0%, 99.5% 57.1%, 97.7% 64.3%, 98.4% 71.4%, 99.7% 78.6%, 99.7% 85.7%, 98.0% 92.9%, 98.4% 100.0%, 92.9% 98.8%, 85.7% 96.4%, 78.6% 99.7%, 71.4% 99.3%, 64.3% 98.8%, 57.1% 97.5%, 50.0% 96.3%, 42.9% 99.4%, 35.7% 96.7%, 28.6% 96.5%, 21.4% 99.2%, 14.3% 96.8%, 7.1% 98.1%, 0.0% 99.2%, 0.7% 92.9%, 2.1% 85.7%, 1.3% 78.6%, 1.4% 71.4%, 0.5% 64.3%, 1.2% 57.1%, 1.2% 50.0%, 1.7% 42.9%, 0.5% 35.7%, 0.7% 28.6%, 1.2% 21.4%, 2.2% 14.3%, 0.6% 7.1%)"><span class="rotulo">pesadelo · 7</span>
+<h2>A roda, mais depressa</h2><p><b>A roda: a mesma, com menos tempo para responder.</b></p>
+<p>A mesma música, eles em volta, e o torii queimando. Mas quando a música para eu tenho
+<b>4,2 s</b>, e não 7.</p>
+<p class="nota">o sétimo lugar continua vazio. <span class="cinza" aria-label="queimado">ainda</span>.</p><span class="furo" style="right: -2.3%; top: 27.7%; width: 37px; height: 35px"></span><span class="furo" style="right: -1.0%; top: 29.0%; width: 52px; height: 46px"></span><span class="furo" style="left: -2.6%; top: 72.3%; width: 34px; height: 48px"></span></div></section>
+<section class="pagina queimada" id="q-ultima"><div class="folha ultima" style="clip-path: polygon(0.0% 0.7%, 7.1% 0.1%, 14.3% 1.0%, 21.4% 1.8%, 28.6% 2.8%, 35.7% 1.0%, 42.9% 2.1%, 50.0% 1.6%, 57.1% 1.0%, 64.3% 0.3%, 71.4% 1.8%, 78.6% 2.9%, 85.7% 2.9%, 92.9% 2.4%, 100.0% 0.1%, 98.1% 7.1%, 99.6% 14.3%, 98.0% 21.4%, 99.2% 28.6%, 99.0% 35.7%, 98.6% 42.9%, 98.0% 50.0%, 99.5% 57.1%, 99.6% 64.3%, 99.3% 71.4%, 99.0% 78.6%, 98.3% 85.7%, 99.8% 92.9%, 97.9% 100.0%, 92.9% 96.1%, 85.7% 99.6%, 78.6% 96.6%, 71.4% 96.7%, 64.3% 98.7%, 57.1% 97.2%, 50.0% 99.2%, 42.9% 98.6%, 35.7% 97.5%, 28.6% 99.0%, 21.4% 97.2%, 14.3% 98.2%, 7.1% 97.5%, 0.0% 97.2%, 1.6% 92.9%, 2.4% 85.7%, 1.7% 78.6%, 1.7% 71.4%, 0.3% 64.3%, 1.2% 57.1%, 0.8% 50.0%, 0.7% 42.9%, 2.0% 35.7%, 1.8% 28.6%, 1.3% 21.4%, 1.0% 14.3%, 1.7% 7.1%)"><div class="outra-letra">
+<p>Se você está lendo isto, o caderno já pegou fogo uma vez.</p>
+<p>A gente nunca parou de brincar.</p>
+<p>Conta de novo.</p>
+</div><span class="furo" style="right: 0.2%; top: 61.9%; width: 34px; height: 33px"></span><span class="furo" style="left: -1.7%; top: 12.3%; width: 63px; height: 40px"></span></div></section>
 <a class="topo" href="#indice">↑ índice</a>
 <button class="luz" type="button" data-modo="escuro">apagar a luz</button>
 <button class="luz uv-btn" type="button" data-modo="uv-on">luz negra</button>
+<button class="luz fogo-btn" type="button" data-modo="queimado">riscar um fósforo</button>
+<div class="fogo-tela" aria-hidden="true"></div>
+<div class="aparicao" aria-hidden="true"><svg viewBox="0 0 120 300" class="sombra-svg"><ellipse cx="54" cy="52" rx="14" ry="24" transform="rotate(-22 54 52)"/><path d="M58,72 q-2,12 -1,24 l-17,0 q-12,62 -8,120 l6,14 l4,-14 q2,-50 6,-90 l-2,76 l-6,98 l12,0 l8,-96 l8,96 l12,0 l-6,-98 l-2,-76 q4,40 6,90 l4,14 l6,-14 q4,-58 -8,-120 l-17,0 q1,-12 -1,-24 z"/><circle cx="47" cy="50" r="2.6" class="olho-vermelho"/><circle cx="58" cy="46" r="2.6" class="olho-vermelho"/></svg></div>
+<div class="clarao" aria-hidden="true"></div>
 <script>
 (function () {
   var corpo = document.body, botoes = document.querySelectorAll('.luz');
-  var texto = {escuro: ['apagar a luz', 'acender a luz'], 'uv-on': ['luz negra', 'luz normal']};
-  function mover(x, y) { corpo.style.setProperty('--mx', x + 'px'); corpo.style.setProperty('--my', y + 'px'); }
+  var texto = {escuro: ['apagar a luz', 'acender a luz'], 'uv-on': ['luz negra', 'luz normal'],
+               queimado: ['riscar um fósforo', 'o caderno de antes']};
+  var mx = innerWidth / 2, my = innerHeight * 0.45;
+  function mover(x, y) { mx = x; my = y; corpo.style.setProperty('--mx', x + 'px'); corpo.style.setProperty('--my', y + 'px'); }
+  var sombra = document.querySelector('.aparicao'), clarao = document.querySelector('.clarao');
+  function aparecer(ms) {  /* ele, na beira da luz, enquanto a lanterna falha */
+    var lado = Math.random() < .5 ? -1 : 1;
+    sombra.classList.remove('grande');
+    sombra.style.left = (mx + lado * (55 + Math.random() * 50) - 55) + 'px';  /* meio dentro da luz */
+    sombra.style.top = (my - 150 + Math.random() * 40) + 'px';
+    sombra.classList.add('ve');
+    setTimeout(function () { sombra.classList.remove('ve'); }, ms);
+  }
+  var cliques = [], viu = false;
+  function inteiro() {  /* quem pisca a lanterna demais chama: ele aparece inteiro, uma vez */
+    viu = true;
+    if (!calmo) { clarao.classList.add('ve'); setTimeout(function () { clarao.classList.remove('ve'); }, 70); }
+    sombra.classList.add('grande', 've');
+    setTimeout(function () { sombra.classList.remove('ve', 'grande'); corpo.classList.add('visto'); }, 650);
+  }
+  function sorte(a, b) { return a + Math.random() * (b - a); }
+  function espalhar() {  /* a tinta UV nunca esta no mesmo lugar: recados e maos se espalham a cada vez */
+    document.querySelectorAll('.uv').forEach(function (el) {
+      el.style.right = 'auto'; el.style.bottom = 'auto';
+      el.style.top = sorte(6, 82) + '%'; el.style.left = sorte(8, 42) + '%';
+      el.style.transform = 'rotate(' + sorte(-12, 12).toFixed(1) + 'deg)';
+    });
+    document.querySelectorAll('.pagina').forEach(function (pag) {
+      var maos = pag.querySelectorAll('.uv-mao');
+      if (!maos.length) return;
+      if (maos.length < 2) {
+        var c = maos[0].cloneNode(true); c.classList.add('extra'); pag.appendChild(c);
+        maos = pag.querySelectorAll('.uv-mao');
+      }
+      maos.forEach(function (m, i) {
+        var some = i > 0 && Math.random() < .5;  /* as vezes, uma segunda mao */
+        m.style.display = some ? 'none' : '';
+        m.style.left = sorte(4, 84) + '%'; m.style.top = sorte(8, 82) + '%'; m.style.bottom = 'auto';
+        m.style.width = sorte(34, 62).toFixed(0) + 'px';
+        m.style.transform = 'rotate(' + sorte(-45, 45).toFixed(0) + 'deg)' + (Math.random() < .5 ? ' scaleX(-1)' : '');
+      });
+    });
+  }
+  espalhar();
+  var olhos = [];
+  function lugar(o) { o.style.left = (20 + Math.random() * (innerWidth - 60)) + 'px';
+    o.style.top = (20 + Math.random() * (innerHeight - 40)) + 'px'; }
+  for (var i = 0; i < 6; i++) {  /* olhos no escuro: somem quando a luz chega perto */
+    var o = document.createElement('div'); o.className = 'olho-par vivo'; o.setAttribute('aria-hidden', 'true');
+    lugar(o); document.body.appendChild(o); olhos.push(o);
+  }
+  setInterval(function () {
+    if (!corpo.classList.contains('escuro')) return;
+    olhos.forEach(function (o) {
+      var r = o.getBoundingClientRect(), d = Math.hypot(r.left + 10 - mx, r.top + 3 - my);
+      if (d < 175 && o.classList.contains('vivo')) {
+        o.classList.remove('vivo');
+        setTimeout(function () { lugar(o); o.classList.add('vivo'); }, 2000 + Math.random() * 2500);
+      } else if (o.classList.contains('vivo') && Math.random() < .03) {  /* piscam */
+        o.classList.remove('vivo'); setTimeout(function () { o.classList.add('vivo'); }, 160);
+      }
+    });
+  }, 250);
   addEventListener('pointermove', function (e) { mover(e.clientX, e.clientY); });
   addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) mover(t.clientX, t.clientY); }, {passive: true});
   var calmo = matchMedia('(prefers-reduced-motion: reduce)').matches, relogio = null;
   function falhar() {  /* de vez em quando a lanterna falha -- como no jogo */
     if (!corpo.classList.contains('escuro') || calmo) return;
+    var ms = 90 + Math.random() * 160;
     corpo.classList.add('pisca');
-    setTimeout(function () { corpo.classList.remove('pisca'); }, 90 + Math.random() * 160);
+    if (Math.random() < .6) aparecer(ms + 40);
+    setTimeout(function () { corpo.classList.remove('pisca'); }, ms);
+  }
+  function queimar(botao) {  /* o caderno pega fogo: a chama sobe pela tela; o que sobra e o pesadelo */
+    corpo.classList.add('pegando-fogo');
+    setTimeout(function () {
+      corpo.classList.add('queimado'); botao.textContent = texto.queimado[1];
+      var capa = document.getElementById('q-capa'); if (capa) capa.scrollIntoView();
+    }, calmo ? 0 : 1450);
+    setTimeout(function () { corpo.classList.remove('pegando-fogo'); }, calmo ? 0 : 2700);
   }
   botoes.forEach(function (botao) {  /* apagar a luz (lanterna) ou luz negra (le a tinta UV): um modo por vez */
     botao.addEventListener('click', function () {
-      var modo = botao.dataset.modo, ligar = !corpo.classList.contains(modo);
-      corpo.classList.remove('escuro', 'uv-on');
+      var modo = botao.dataset.modo, ligar = !corpo.classList.contains(modo), agora = Date.now();
+      if (modo === 'escuro') {
+        cliques = cliques.filter(function (t) { return agora - t < 4000; }).concat([agora]);
+        if (cliques.length >= 5 && !viu) setTimeout(inteiro, 120);
+      }
+      var estava = corpo.classList.contains('queimado');
+      corpo.classList.remove('escuro', 'uv-on', 'queimado');
       botoes.forEach(function (b) { b.textContent = texto[b.dataset.modo][0]; });
-      if (ligar) { corpo.classList.add(modo); botao.textContent = texto[modo][1]; }
+      if (ligar && modo === 'queimado') queimar(botao);
+      else if (ligar) { corpo.classList.add(modo); botao.textContent = texto[modo][1]; }
+      if (estava && !ligar) { var capa = document.getElementById('capa'); if (capa) capa.scrollIntoView(); }
+      if (ligar && modo === 'uv-on') espalhar();
       clearInterval(relogio);
       if (ligar && modo === 'escuro') relogio = setInterval(function () { if (Math.random() < .25) falhar(); }, 2500);
     });

@@ -34,20 +34,68 @@ def _salvar(dados: dict) -> None:
 
 
 def campanha() -> dict | None:
-    """A campanha em andamento: {"noite_n", "aprendeu_base", "memoria"}, ou None."""
+    """A campanha em andamento: {"noite_n", "aprendeu_base", "memoria", "levou_oitavo"}, ou None.
+    `levou_oitavo`: em alguma noite desta campanha voce levou o 8o omamori (fecha o final
+    verdadeiro; ver HISTORIA.md)."""
     c = carregar().get("campanha")
     return c if isinstance(c, dict) and c.get("noite_n") else None
 
 
-def salvar_campanha(noite_n: int, aprendeu_base: float, memoria: dict) -> None:
+def salvar_campanha(noite_n: int, aprendeu_base: float, memoria: dict, levou_oitavo: bool = False) -> None:
     dados = carregar()
-    dados["campanha"] = {"noite_n": noite_n, "aprendeu_base": aprendeu_base, "memoria": memoria}
+    dados["campanha"] = {"noite_n": noite_n, "aprendeu_base": aprendeu_base, "memoria": memoria,
+                         "levou_oitavo": levou_oitavo}
     _salvar(dados)
 
 
 def apagar_campanha() -> None:
     dados = carregar()
     dados.pop("campanha", None)
+    _salvar(dados)
+
+
+def mortes(quem: str) -> int:
+    """Quantas vezes `quem` ja te pegou (em qualquer modo, desde sempre)."""
+    return int(carregar().get("mortes", {}).get(quem, 0))
+
+
+def morreu(quem: str) -> int:
+    """Mais uma morte para `quem`; devolve a conta nova."""
+    dados = carregar()
+    contas = dados.get("mortes") if isinstance(dados.get("mortes"), dict) else {}
+    contas[quem] = int(contas.get(quem, 0)) + 1
+    dados["mortes"] = contas
+    _salvar(dados)
+    return contas[quem]
+
+
+def trancada() -> int | None:
+    """A noite sem saida em andamento (o numero dela na campanha), ou None. Enquanto houver uma,
+    o jogo abre direto nela."""
+    n = carregar().get("trancada")
+    return n if isinstance(n, int) and n > 0 else None
+
+
+def trancar(noite_n: int) -> None:
+    dados = carregar()
+    dados["trancada"] = noite_n
+    _salvar(dados)
+
+
+def destrancar() -> None:
+    dados = carregar()
+    if dados.pop("trancada", None) is not None:
+        _salvar(dados)
+
+
+def fins() -> set[str]:
+    """Os finais ja vistos: "falso" (o torii, tendo levado o oitavo) e "verdadeiro" (o rio)."""
+    return set(carregar().get("fins", []))
+
+
+def marcar_fim(nome: str) -> None:
+    dados = carregar()
+    dados["fins"] = sorted(set(dados.get("fins", [])) | {nome})
     _salvar(dados)
 
 

@@ -38,3 +38,22 @@ def test_o_diario_traz_os_papeis_os_nomes_e_os_numeros():
 def test_numeros_a_brasileira():
     g = _gerador()
     assert (g.n(30, 0), g.n(1.6), g.n(75.0), g.n(4.5)) == ("30", "1,6", "75", "4,5")
+
+
+def test_os_segredos_estao_la_e_a_pagina_arrancada_fora_do_indice():
+    texto = _gerador().gerar()
+    indice = texto[texto.index('<ol class="indice">'):texto.index("</ol>")]
+    assert 'id="arrancada"' in texto and "#arrancada" not in indice
+    assert 'class="noite"' in texto and 'class="lapis"' in texto and 'class="aparicao"' in texto
+    assert texto.count('class="uv-mao"') >= 5
+
+
+def test_o_caderno_queimado_mostra_o_pesadelo():
+    from terror_ps1 import mapa
+    g = _gerador()
+    texto = g.gerar()
+    assert 'data-modo="queimado"' in texto and 'class="fogo-tela"' in texto
+    assert texto.count('class="pagina queimada"') == len(g.paginas_queimadas())
+    for par in mapa.PARES_TEXTO.values():
+        assert html.escape(par) in texto
+    assert 'class="cinza"' in texto and "[[" not in texto

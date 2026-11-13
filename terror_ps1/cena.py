@@ -32,7 +32,7 @@ from ouroboros.interfaces.renderer3d import (
     triangulos_para_arrays,
 )
 
-from terror_ps1 import aldeia, arrozal, bambuzal, malhas, mapa, progresso, regras, sons
+from terror_ps1 import aldeia, arrozal, bambuzal, cemiterio, escola, malhas, mapa, progresso, regras, rio, sons, torii, verdades
 from terror_ps1.malhas import _altura_terra
 
 NEVOA = (17 / 255, 18 / 255, 25 / 255)  # cinza-azulado: os troncos escuros recortam contra ela
@@ -47,14 +47,26 @@ AJUDA_2 = "ESPACO usa (esconder, soltar, deixar)   V camera"
 REGRA_DA_NOITE = {"floresta": "ele so anda quando a luz nao esta nele -- e ouve tudo",
                   "arrozal": "ele nao enxerga: a luz nao importa. so o silencio. fique nos diques.",
                   "aldeia": "a verdadeira foge de voce. a falsa espera. nao de as costas para ela.",
-                  "bambuzal": "ele so segue o seu sangue. nao corte caminho pelo bambu."}
+                  "bambuzal": "ele so segue o seu sangue. nao corte caminho pelo bambu.",
+                  "cemiterio": "ela sempre sabe onde voce esta. so cai quando a luz pega a coisa nas costas dela.",
+                  "escola": "ela tem medo do escuro: vem para a luz. apague e ela para. mas no escuro voce nao ve.",
+                  "torii": "quando a musica parar, alguem vai estar atras de voce. escute quem e.",
+                  "rio": "ela ainda esta escondida. ache ela no escuro: se a luz acha ela de longe, nao vale."}
 INTERVALO_SINO = 3.5
 ALCANCE_GUIZO = 14.0  # o guizo do amuleto mais perto so se ouve a esta distancia
 POEIRA = 220  # graos de poeira no ar: so aparecem dentro do feixe
 GOTAS = 520  # a chuva
 CAIXA_CHUVA = np.array([14.0, 9.0, 14.0])
 ID_FOTO = 91_001  # a textura da ultima foto
-NOME_NOITE = {2: "SEGUNDA NOITE", 3: "TERCEIRA NOITE", 4: "QUARTA NOITE"}
+NOME_NOITE = {2: "SEGUNDA NOITE", 3: "TERCEIRA NOITE", 4: "QUARTA NOITE", 5: "QUINTA NOITE", 6: "SEXTA NOITE",
+              7: "SETIMA NOITE", 8: "OITAVA NOITE"}
+# a roda: a letra (uma linha por vez, enquanto cantam), o nome e o som de quem fica atras
+LETRA = ("roda, roda, quem ficou na roda?", "conta ate dez, de olhos fechados", "quem se escondeu nao volta mais",
+         "quando a musica parar...", "quem esta atras de voce?")
+NOME_NA_RODA = {"vulto": "ele", "cego": "o Cego", "imitadora": "a falsa", "farejador": "o Farejador",
+                "fantoche": "ela, a de luto", "pequena": "a pequena"}
+SOM_NA_RODA = {"vulto": "galho", "cego": "cego_passo", "imitadora": "choro", "farejador": "farejar",
+               "fantoche": "gemido", "pequena": "estalos"}
 TINTA = (40, 34, 42, 255)
 CAIXA_POEIRA = np.array([7.0, 3.0, 7.0])
 
@@ -72,7 +84,9 @@ def _quebrar(texto: str, largura: int) -> list[str]:
 def _geometria(m: mapa.Mapa) -> list:
     """Os triangulos do que nao se mexe, pelo bioma da noite."""
     return {"arrozal": arrozal.geometria, "aldeia": aldeia.geometria,
-            "bambuzal": bambuzal.geometria}.get(m.bioma, mapa.geometria)(m)
+            "bambuzal": bambuzal.geometria, "cemiterio": cemiterio.geometria,
+            "escola": escola.geometria, "torii": torii.geometria,
+            "rio": rio.geometria}.get(m.bioma, mapa.geometria)(m) + (mapa.geometria_fogo(m) if m.fogo else [])
 
 
 def _centro(r: IRenderer, x: float, y: float, texto: str, tam: int, cor) -> None:
@@ -108,6 +122,16 @@ class TerrorScene(IScene):
         self.m_boneca = malha(aldeia.malha_boneca())
         self.m_farejador = malha(bambuzal.malha_farejador())
         self.m_gota = malha(mapa.malha_gota())
+        self.m_fantoche = malha(cemiterio.malha_fantoche())
+        self.m_fantoche_caida = malha(cemiterio.malha_fantoche_caida())
+        self._verdade, self._mortes = "", 0  # a verdade que a ultima morte contou
+        self._sem_saida_t, self._acordou_t = -99.0, -99.0
+        self._trancada = False
+        if modo == "campanha":
+            try:
+                self._trancada = progresso.trancada() == self.estado.noite_n
+            except OSError:
+                pass
         self._passos_imita = 0.0
         self.vulto = malha(malhas.vulto(0.0, 0.0))
         self.m_amuleto = malha(mapa.malha_amuleto())
@@ -148,6 +172,7 @@ class TerrorScene(IScene):
         self._rng = random.Random(3)
         self._tela_cheia = False
         self._venceu_em = 0.0
+        self._levou = False  # levou o oitavo em alguma noite (a campanha): o final falso
         entrada.set_mouse_captured(True)
         if audio is not None:
             self._sons = sons.gerar(pasta_sons or Path(tempfile.gettempdir()) / "terror_ps1_sons")
@@ -215,9 +240,12 @@ class TerrorScene(IScene):
     def update(self, world: World, delta_time: float) -> None:
         e = self.entrada
         if e.is_action_pressed("sair") and self.ao_sair is not None:  # ESC: volta ao menu
-            self.liberar()
-            self.ao_sair()
-            return
+            if self._trancada and not self.estado.dev:  # a noite sem saida: ESC nao adianta
+                self._sem_saida_t = self.estado.tempo
+            else:
+                self.liberar()
+                self.ao_sair()
+                return
         if e.is_action_pressed("tela_cheia"):
             self._tela_cheia = not self._tela_cheia
             self.renderer.set_fullscreen(self._tela_cheia)
@@ -252,17 +280,31 @@ class TerrorScene(IScene):
                          foto=e.is_action_pressed("foto"))
         if "foto" in s.eventos:
             self._foto_pendente, self._flash_t = True, s.tempo
+        if "pegou" in s.eventos:  # a morte conta a historia: cada vez, um pouco mais da verdade
+            try:
+                self._mortes = progresso.morreu(s.quem_pegou)
+            except OSError:
+                self._mortes += 1
+            self._verdade = verdades.verdade(s.quem_pegou, self._mortes)
+        if "fantoche_acorda" in s.eventos:
+            self._acordou_t = s.tempo
+            if self.modo == "campanha" and not self._trancada:  # daqui ate o amanhecer, nao ha saida
+                self._trancada = True
+                try:
+                    progresso.trancar(s.noite_n)
+                except OSError:
+                    pass
         if "pagina" in s.eventos:
             self._pagina_vista = len(s.paginas) - 1
         if s.venceu and not self._venceu_em:
             self._venceu_em = s.tempo
             self._concluiu()
         if s.venceu and e.is_action_pressed("soltar") and s.tempo - self._venceu_em > 2.0:
-            if self.modo == "livre" and self.ao_sair is not None:  # noite solta: de volta ao menu
+            if (self.modo == "livre" or self.mapa.tem_esconde) and self.ao_sair is not None:  # de volta ao menu
                 self.liberar()
                 self.ao_sair()
                 return
-            regras.proxima_noite(s)
+            regras.proxima_noite(s, secreta=self.mapa.tem_roda and not self._levou)  # depois do torii: o rio
         if s.mapa is not self.mapa:
             self._trocar_de_mapa()
         if not s.venceu:
@@ -308,13 +350,23 @@ class TerrorScene(IScene):
         monstros = [("vulto", s.vulto if m.tem_vulto else None, (220, 40, 40)), ("cego", s.cego, (230, 140, 40)),
                     ("imitadora", s.imitadora[:2] if s.imitadora else None, (240, 200, 220)),
                     ("farejador", s.farejador, (150, 30, 30)), ("pequena", s.pequena, (170, 110, 230)),
-                    ("ayame", s.ayame[:2] if s.ayame else None, (120, 220, 230))]
+                    ("ayame", s.ayame[:2] if s.ayame else None, (120, 220, 230)),
+                    ("fantoche", s.fantoche[:2] if s.fantoche else None, (220, 214, 190))]
         for nome, pos, cor in monstros:
             if pos is not None:
                 px, py = p(*pos)
                 r.draw_ui_circle(px, py, 4, (*cor, 255))
                 r.draw_text(px + 6, py - 6, nome, 10, (*cor, 255))
         px, py = p(s.x, s.z)
+        for a in s.amuletos:  # os omamori que faltam; uma linha ate o mais perto
+            r.draw_ui_circle(*p(a[0], a[1]), 3, (250, 220, 90, 255))
+        if s.amuletos:
+            a = min(s.amuletos, key=lambda a: math.hypot(a[0] - s.x, a[1] - s.z))
+            r.draw_ui_line(px, py, *p(a[0], a[1]), (250, 220, 90, 140), 1)
+            r.draw_text(x0, y0 + lado + 18, f"omamori: {len(s.amuletos)} faltam, o mais perto a "
+                        f"{math.hypot(a[0] - s.x, a[1] - s.z):.0f} m", 11, (250, 220, 90, 230))
+        if s.oitavo == "altar":
+            r.draw_ui_circle(*p(*m.altar_oitavo), 4, (250, 220, 90, 255), 1)
         fx, _, fz = regras.direcao(s.giro)
         r.draw_ui_line(px, py, px + fx * 10, py + fz * 10, (255, 255, 255, 255), 2)
         r.draw_ui_circle(px, py, 3, (255, 255, 255, 255))
@@ -325,10 +377,22 @@ class TerrorScene(IScene):
         """Terminou a noite: marca como concluida e, na campanha, salva a noite seguinte (com o
         que ele ja sabe de voce) -- fechar o jogo agora continua dali."""
         s = self.estado
+        self._trancada = False
+        self._levou = s.fim == "floresta"
         try:
+            progresso.destrancar()
             progresso.marcar_concluida(s.mapa.bioma, s.espelho)
             if self.modo == "campanha":
-                progresso.salvar_campanha(s.noite_n + 1, max(s.aprendeu, s.aprendeu_base, 0.6), s.memoria)
+                levou = bool((progresso.campanha() or {}).get("levou_oitavo")) or s.fim == "floresta"
+                self._levou = levou
+                if self.mapa.tem_esconde:  # achou: a campanha acabou
+                    progresso.marcar_fim("verdadeiro")
+                    progresso.apagar_campanha()
+                else:
+                    if self.mapa.tem_roda and levou:
+                        progresso.marcar_fim("falso")
+                    progresso.salvar_campanha(s.noite_n + 1, max(s.aprendeu, s.aprendeu_base, 0.6), s.memoria,
+                                              levou)
         except OSError:
             pass  # sem onde salvar, o jogo segue
 
@@ -392,6 +456,12 @@ class TerrorScene(IScene):
             elif ev == "pequena_anda" and s.pequena is not None:
                 d = math.hypot(s.pequena[0] - s.x, s.pequena[1] - s.z)
                 a.play_spatial("estalos", min(1.0, 3.0 / max(d, 1.0)), self._lado(regras.lado_de(s, *s.pequena)))
+            elif ev == "roda_canta":
+                a.play_one_shot("roda", 0.8)
+            elif ev == "roda_som" and s.roda_quem:
+                a.play_spatial(SOM_NA_RODA[s.roda_quem], 0.9, self._lado(regras.lado_de(s, *regras.atras_na_roda(s))))
+            elif ev == "roda_acertou":
+                a.play_one_shot("chiado", 0.4)
             elif ev in ("oitavo", "levou_oitavo"):
                 a.play_one_shot("sino", 0.7)
             elif ev == "pisca":
@@ -400,6 +470,21 @@ class TerrorScene(IScene):
                 a.play_one_shot("sinalizador", 0.7)
             elif ev == "pegou":
                 a.play_one_shot("pegou", 0.9)
+            elif ev in ("fantoche_acorda", "fantoche_levanta"):  # os ossos estalando, levantando ela
+                a.play_spatial("estalos", 1.0 if ev == "fantoche_acorda" else min(1.0, 6.0 / max(s.dist_fantoche(), 1.0)),
+                               self._lado(regras.lado_de(s, *s.fantoche[:2])))
+            elif ev == "fantoche_passo" and s.fantoche is not None:
+                a.play_spatial("estalos", min(0.7, 3.0 / max(s.dist_fantoche(), 1.0)),
+                               self._lado(regras.lado_de(s, *s.fantoche[:2])))
+            elif ev == "fantoche_cai":
+                a.play_spatial("gemido", min(1.0, 6.0 / max(s.dist_fantoche(), 1.0)),
+                               self._lado(regras.lado_de(s, *s.fantoche[:2])))
+            elif ev == "agarrou":
+                a.play_one_shot("pegou", 0.6)
+            elif ev == "chute":
+                a.play_one_shot("forca", 0.7)
+            elif ev == "soltou":
+                a.play_one_shot("estalos", 1.0)
             elif ev in ("amuleto", "pilha", "depositou"):
                 a.play_one_shot("coleta", 0.6)
             elif ev == "armadilha":
@@ -407,7 +492,13 @@ class TerrorScene(IScene):
             elif ev == "forca":
                 a.play_one_shot("forca", 0.4)
             elif ev == "venceu":
-                a.play_one_shot("amanhecer" if s.fim == "amanhecer" else "passinhos", 0.8)
+                a.play_one_shot("amanhecer" if s.fim in ("amanhecer", "achou") else "passinhos", 0.8)
+            elif ev in ("ayame_cantarola", "ayame_corre"):
+                ax, az = regras.ayame_escondida(s) or (s.x, s.z)
+                d = math.hypot(ax - s.x, az - s.z)
+                a.play_spatial("roda" if ev == "ayame_cantarola" else "passinhos",
+                               min(0.6, 4.0 / max(d, 1.0)) * (0.6 if ev == "ayame_cantarola" else 1.0),
+                               self._lado(regras.lado_de(s, ax, az)))
         vivo = not s.venceu and s.pego <= 0
         seco = s.chuva < 0.3  # na chuva os bichos se calam -- e a pista do silencio some
         self._grilos -= dt
@@ -451,7 +542,7 @@ class TerrorScene(IScene):
         dia = min(1.0, (s.tempo - self._venceu_em) / 4.0) if s.venceu else 0.0  # o amanhecer
         if s.fim == "floresta":
             dia = 0.0  # quem levou o oitavo nao ve o amanhecer
-        rosto = s.pego > 0.7 and s.quem_pegou == "vulto"  # os primeiros 1,3 s de "pegou": o rosto dele, de perto
+        rosto = s.pego > regras.PEGO_DURA - 1.3 and s.quem_pegou == "vulto"  # os primeiros 1,3 s: o rosto dele
         foto = self._foto_pendente  # o quadro da foto: sem neblina, e com o que a floresta esconde
         vhs = min(1.0, 0.75 * perto ** 1.5 + (0.35 if s.encarando else 0.0) + (0.5 if s.piscando > 0 else 0.0)
                   + 0.12 * s.tensao + (1.0 if rosto else 0.0)) * (1 - dia) * (0.0 if foto else 1.0)
@@ -501,6 +592,14 @@ class TerrorScene(IScene):
             r.desenhar(self.vulto, translacao_e_giro_y(vx, 0.0, vz, giro))
             if not s.luz_ligada() and dist < 28.0:  # no escuro, os olhos dele
                 r.desenhar(self.m_olhos_vulto, translacao_e_giro_y(vx, 0.0, vz, giro))
+        if s.pego > 0 and s.quem_pegou == "fantoche" and self._mortes >= verdades.ULTIMA:
+            fx, _, fz = olhar  # a quinta vez: ela de pe na sua frente; a coisa solta, e ela cai. Ja estava morta.
+            n = math.hypot(fx, fz) or 1.0
+            px, pz = olhos[0] + fx / n * 2.6, olhos[2] + fz / n * 2.6
+            de_pe = s.pego > regras.PEGO_DURA - 0.9
+            r.desenhar(self.m_fantoche if de_pe else self.m_fantoche_caida,
+                       translacao_e_giro_y(px, self._y(px, pz), pz,
+                                           math.atan2(olhos[0] - px, olhos[2] - pz) + (0.0 if de_pe else 1.3)))
         r.desenhar(self.poeira)
         r.desenhar(self.chuva)
         if foto:
@@ -530,6 +629,10 @@ class TerrorScene(IScene):
             desenhar(self.m_cego, *na_frente(rng.uniform(11.0, 16.0), rng.uniform(-4.0, 4.0)), -0.2)
         elif self.mapa.bioma == "aldeia":  # uma boneca aos seus pes
             desenhar(self.m_boneca, *na_frente(1.4, rng.uniform(-0.5, 0.5)))
+        elif self.mapa.bioma == "cemiterio":  # ela, de pe entre os tumulos, olhando para a camera
+            desenhar(self.m_fantoche, *na_frente(rng.uniform(8.0, 13.0), rng.uniform(-3.0, 3.0)))
+        elif self.mapa.bioma == "escola":  # ela, aos seus pes, olhando para cima
+            desenhar(self.m_pequena, *na_frente(rng.uniform(1.6, 2.4), rng.uniform(-0.4, 0.4)))
 
     def _revelar_foto(self, r, renderer: IRenderer) -> None:
         """Guarda o quadro da foto e o carrega como imagem para a polaroide do HUD."""
@@ -570,6 +673,24 @@ class TerrorScene(IScene):
         if s.pequena is not None and not (s.pego > 0 and s.quem_pegou == "pequena"):
             qx, qz = s.pequena
             r.desenhar(self.m_pequena, translacao_e_giro_y(qx, self._y(qx, qz), qz, math.atan2(s.x - qx, s.z - qz)))
+        escondida = regras.ayame_escondida(s)
+        if escondida is not None:  # a noite secreta: ela, agachada atras da pedra (ou correndo)
+            ax, az = escondida
+            if s.venceu:
+                giro = math.atan2(s.x - ax, s.z - az)  # achou: ela se vira para voce
+            elif s.escondida_corre is not None:
+                tx, tz = self.mapa.esconde_lugares[s.escondida]
+                giro = math.atan2(tx - ax, tz - az)
+            else:
+                giro = 0.0  # de frente para a pedra
+            r.desenhar(self.m_ayame, translacao_e_giro_y(ax, self._y(ax, az), az, giro))
+        if self.mapa.tem_roda:  # a roda: os seis em volta (e quem estava atras, quando voce acerta)
+            na_roda = {"vulto": self.vulto, "cego": self.m_cego, "imitadora": self.m_ayame,
+                       "farejador": self.m_farejador, "fantoche": self.m_fantoche, "pequena": self.m_pequena}
+            for quem, qx, qz in regras.roda_lugares(s):
+                if not (s.pego > 0 and s.quem_pegou == quem):
+                    r.desenhar(na_roda[quem], translacao_e_giro_y(qx, self._y(qx, qz), qz,
+                                                                  math.atan2(s.x - qx, s.z - qz)))
         estatua = self.m_boneca if self.mapa.estatua == "boneca" else self.m_espantalho
         for ex, ez, eg in s.espantalhos:
             r.desenhar(estatua, translacao_e_giro_y(ex, 0.0, ez, eg))
@@ -582,6 +703,12 @@ class TerrorScene(IScene):
         if s.imitadora is not None:  # igual a Ayame -- mas virada para voce, e parada
             ix, iz, _ = s.imitadora
             r.desenhar(self.m_ayame, translacao_e_giro_y(ix, 0.0, iz, math.atan2(s.x - ix, s.z - iz)))
+        if s.fantoche is not None and not (s.pego > 0 and s.quem_pegou == "fantoche"):
+            fx, fz, rumo = s.fantoche
+            deitada = not s.fantoche_acordou or s.fantoche_caida > 0
+            tremor = 0.0 if deitada else 0.06 * math.sin(s.tempo * 9.0) * math.sin(s.tempo * 2.3)  # andada, aos trancos
+            r.desenhar(self.m_fantoche_caida if deitada else self.m_fantoche,
+                       translacao_e_giro_y(fx, self._y(fx, fz), fz, rumo + tremor))
         if s.cego is not None and not (s.pego > 0 and s.quem_pegou == "cego"):
             cx, cz = s.cego
             alvo = s.cego_alvo or (s.x, s.z)
@@ -621,8 +748,9 @@ class TerrorScene(IScene):
             r.draw_ui_rect(22, h - 63, 120 * (1 - s.folego), 6, cor_folego)
             r.draw_text(152, h - 67, "sem folego" if s.sem_folego else "folego", 12, BRANCO)
         r.draw_text(w - 16, 12, f"{self._fps:4.0f} qps", 13, (120, 120, 120, 255), anchor="topright")
-        r.draw_text(20, h - 78, f"omamori: {s.carregando} com voce   {s.depositados} no altar   {len(s.amuletos)} faltando",
-                    15, (220, 120, 110, 240))
+        if self.mapa.amuletos:
+            r.draw_text(20, h - 78, f"omamori: {s.carregando} com voce   {s.depositados} no altar   "
+                        f"{len(s.amuletos)} faltando", 15, (220, 120, 110, 240))
         # DESATIVADO (2026-11-12): sinalizador e diario no jogo fora por enquanto -- muita coisa para lembrar
         # if s.sinalizadores:
             # r.draw_text(w - 16, h - 33, "sinalizador: G", 13, (220, 110, 90, 220), anchor="topright")
@@ -644,10 +772,12 @@ class TerrorScene(IScene):
                 _centro(r, w / 2, 12, AJUDA, 13, BRANCO[:3] + (alfa,))
                 _centro(r, w / 2, 30, AJUDA_2, 13, BRANCO[:3] + (alfa,))
             _centro(r, w / 2, 50, self.mapa.historia, 14, (220, 150, 140, alfa))
-            _centro(r, w / 2, 70, REGRA_DA_NOITE.get(self.mapa.bioma, ""), 13, (190, 170, 160, alfa))
+            regra = mapa.PARES_TEXTO.get(self.mapa.bioma, "") if self.mapa.fogo else REGRA_DA_NOITE.get(self.mapa.bioma, "")
+            _centro(r, w / 2, 70, regra.lower(), 13, (190, 170, 160, alfa))
         if s.noite_n > 1 and s.relogio_noite < 6:
             alfa = int(255 * min(1.0, (6 - s.relogio_noite) / 2))
-            _centro(r, w / 2, h / 2 - 70, NOME_NOITE.get(s.noite_n, f"NOITE {s.noite_n}"), 30, (200, 60, 50, alfa))
+            titulo = "PESADELO" if self.mapa.fogo else NOME_NOITE.get(s.noite_n, f"NOITE {s.noite_n}")
+            _centro(r, w / 2, h / 2 - 70, titulo, 30, (200, 60, 50, alfa))
             _centro(r, w / 2, h / 2 - 34, self.mapa.nome, 18, (190, 170, 160, alfa))
         texto = regras.bilhete_perto(s) or regras.nome_do_jizo(s) or regras.placa_perto(s)
         if texto and s.pego <= 0:
@@ -667,7 +797,8 @@ class TerrorScene(IScene):
                 if math.hypot(s.x - ex, s.z - ez) < regras.ESCONDER:
                     _centro(r, w / 2, h / 2 + 50, f"ESPACO: esconder-se {nome}", 15, (190, 190, 200, 230))
         if s.oitavo == "altar" and not s.venceu:
-            _centro(r, w / 2, 14, "No altar ha oito omamori. Voce trouxe sete.", 16, (230, 200, 150, 255))
+            _centro(r, w / 2, 14, "No altar, o oitavo omamori. O dela." if self.mapa.tem_roda
+                    else "No altar ha oito omamori. Voce trouxe sete.", 16, (230, 200, 150, 255))
             _centro(r, w / 2, 38, "ESPACO: deixar o oitavo e esperar o amanhecer   |   ou pegue o oitavo e leve-o de volta",
                     13, (210, 190, 160, 230))
         elif s.oitavo == "levando" and not s.venceu:
@@ -677,7 +808,11 @@ class TerrorScene(IScene):
             _centro(r, w / 2, h / 2 + 40, "PRESO -- aperte ESPACO para forcar a armadilha", 16, (230, 90, 70, 255))
         elif not s.amuletos and s.carregando and not s.venceu:
             _centro(r, w / 2, 14, "todos os omamori -- leve-os ao santuario", 15, (230, 200, 150, 255))
-        if s.venceu and s.fim == "floresta":
+        if regras.pode_achar(s) and not s.venceu and s.pego <= 0:
+            _centro(r, w / 2, h / 2 + 50, "ESPACO: achei voce", 16, (230, 220, 200, 255))
+        if s.venceu and (self.mapa.tem_roda or self.mapa.tem_esconde):
+            self._hud_final(r, w, h)
+        elif s.venceu and s.fim == "floresta":
             escuro = int(255 * min(1.0, (s.tempo - self._venceu_em) / 3.0))
             r.draw_ui_rect(0, 0, w, h, (0, 0, 0, escuro))
             _centro(r, w / 2, h / 2 - 40, "a floresta ficou com voce", 30, (200, 190, 180, escuro))
@@ -693,11 +828,27 @@ class TerrorScene(IScene):
             for borda in ((0, 0, w, 14), (0, h - 14, w, 14), (0, 0, 14, h), (w - 14, 0, 14, h)):
                 r.draw_ui_rect(*borda, (120, 0, 0, int(90 + 70 * k)))
             _centro(r, w / 2, h - 110, "sangrando", 14, (220, 70, 60, 230))
-        if 0 < s.pego <= 0.7 or (s.pego > 0 and s.quem_pegou in ("pequena", "cego", "farejador")):
-            r.draw_ui_rect(0, 0, w, h, (60, 0, 0, int(220 * min(1.0, (2.0 - s.pego) / 0.6 + 0.3))))
+        if s.agarrado > 0:
+            self._hud_agarrado(r, w, h)
+        if self.mapa.tem_roda and s.pego <= 0 and not s.venceu:
+            self._hud_roda(r, w, h)
+        if s.fantoche_acordou and s.tempo - self._acordou_t < 5.0 and s.pego <= 0 and s.agarrado <= 0:
+            alfa = int(255 * min(1.0, (5.0 - (s.tempo - self._acordou_t)) / 1.5))
+            _centro(r, w / 2, h / 2 + 100, "ela levantou", 24, (220, 214, 190, alfa))
+            if self._trancada:
+                _centro(r, w / 2, h / 2 + 130, "daqui ate o amanhecer, nao ha saida", 15, (200, 80, 70, alfa))
+        if s.tempo - self._sem_saida_t < 2.5:
+            _centro(r, w / 2, h / 2 + 160, "nao ha saida", 22, (200, 60, 50, 255))
+        ultima = s.quem_pegou == "fantoche" and self._mortes >= verdades.ULTIMA  # a quinta: ver o corpo cair
+        if (0 < s.pego <= regras.PEGO_DURA - 1.3
+                or (s.pego > 0 and s.quem_pegou in ("pequena", "cego", "farejador", "fantoche"))):
+            forte = min(1.0, (regras.PEGO_DURA - s.pego) / 0.6 + 0.3)
+            r.draw_ui_rect(0, 0, w, h, (20, 0, 0, int(120 * forte)) if ultima else (60, 0, 0, int(220 * forte)))
             frase = {"pequena": "ela te achou", "cego": "ele te ouviu", "imitadora": "nao era ela",
-                     "farejador": "ele seguiu o rastro"}.get(s.quem_pegou, "ele te achou")
-            _centro(r, w / 2, h / 2 - 12, frase, 28, BRANCO)
+                     "farejador": "ele seguiu o rastro", "fantoche": "ela te levou"}.get(s.quem_pegou, "ele te achou")
+            _centro(r, w / 2, h / 2 - (110 if ultima else 12), frase, 28, BRANCO)
+            if self._verdade:  # a verdade desta morte
+                _centro(r, w / 2, h / 2 + (70 if ultima else 30), self._verdade, 16, (210, 170, 160, int(255 * forte)))
         if s.tempo - self._foto_t < 5.0:  # a polaroide
             r.draw_ui_rect(w - 300, h - 300, 272, 186, (226, 222, 210, 245))
             r.draw_ui_image(ID_FOTO, w - 292, h - 292, anchor=(0.0, 0.0), scale=0.8)
@@ -707,6 +858,20 @@ class TerrorScene(IScene):
         # DESATIVADO (2026-11-12): sinalizador e diario no jogo fora por enquanto -- muita coisa para lembrar
         # if self._diario:
             # self._desenhar_diario(r, w, h)
+
+    def _hud_agarrado(self, r: IRenderer, w: float, h: float) -> None:
+        """Ela te derrubou: segure abaixado, depois chute. A barra de baixo e o tempo."""
+        s = self.estado
+        k = 0.5 + 0.5 * math.sin(s.tempo * 9.0)
+        r.draw_ui_rect(0, 0, w, h, (30, 0, 0, int(90 + 50 * k)))
+        if s.segurou < regras.AGARRADO_SEGURAR:
+            texto, parte = "SEGURE  CTRL / C", s.segurou / regras.AGARRADO_SEGURAR
+        else:
+            texto, parte = f"CHUTE!  SHIFT   {s.chutes}/{regras.AGARRADO_CHUTES}", s.chutes / regras.AGARRADO_CHUTES
+        _centro(r, w / 2, h / 2 + 30, texto, 26, (240, 220, 200, 255))
+        r.draw_ui_rect(w / 2 - 120, h / 2 + 70, 240, 10, (20, 20, 24, 220))
+        r.draw_ui_rect(w / 2 - 118, h / 2 + 72, 236 * parte, 6, (220, 210, 150, 240))
+        r.draw_ui_rect(w / 2 - 120, h / 2 + 86, 240 * s.agarrado / regras.AGARRADO_TEMPO, 4, (200, 60, 50, 240))
 
     def _desenhar_diario(self, r: IRenderer, w: float, h: float) -> None:
         """O diario aberto (TAB): as paginas achadas. A do mapa desenha o mapa -- e ele mente."""
@@ -755,7 +920,56 @@ class TerrorScene(IScene):
         r.draw_ui_circle(sx, sz, 5, (170, 40, 40, 255))
         r.draw_text(sx + 7, sz - 7, "santuario", 11, (150, 30, 30, 255))
 
+    def _hud_roda(self, r: IRenderer, w: float, h: float) -> None:
+        """A roda: olhos fechados enquanto cantam (a letra, uma linha por vez); a pergunta e o
+        tempo quando a musica para; quem era, quando voce acerta; e, no fim, o lugar vazio."""
+        s = self.estado
+        if s.roda in ("canto", "vazio"):
+            r.draw_ui_rect(0, 0, int(w), int(h), (14, 0, 0, 228))
+            k = min(len(LETRA) - 1, int(s.roda_t / regras.RODA_CANTO * len(LETRA)))
+            for i in range(k + 1):
+                _centro(r, w / 2, h / 2 - 70 + i * 26, LETRA[i], 16, (200, 150, 140, 255 if i == k else 110))
+            _centro(r, w / 2, h - 60, "olhos fechados", 13, (120, 90, 90, 200))
+        elif s.roda == "atras":
+            r.draw_ui_rect(0, 0, int(w), int(h), (0, 0, 0, 242))
+            _centro(r, w / 2, h / 2 - 20, "quem esta atras de voce?", 20, (220, 200, 190, 255))
+            falta = max(0.0, 1.0 - s.roda_t / regras.RODA_JANELA)
+            r.draw_ui_rect(int(w / 2 - 100), int(h / 2 + 20), int(200 * falta), 4, (200, 60, 50, 230))
+        elif s.roda == "acertou":
+            _centro(r, w / 2, h / 2 + 90, f"era {NOME_NA_RODA[s.roda_quem]}.", 18, (220, 200, 190, 255))
+        elif s.roda == "fim" and s.roda_t < 7.0:
+            _centro(r, w / 2, h / 2 + 90, "atras de voce: ninguem.", 18, (220, 200, 190, 255))
+            _centro(r, w / 2, h / 2 + 116, "o setimo lugar e seu.", 15, (200, 60, 50, 255))
+
+    def _hud_final(self, r: IRenderer, w: float, h: float) -> None:
+        """O fim da setima noite. Levou o oitavo em alguma noite: o final falso (voce sai, mas
+        alguem fica no torii contando). Deixou em todas: amanhece, e o rio espera."""
+        s = self.estado
+        k = min(1.0, (s.tempo - self._venceu_em) / 3.0)
+        if self.mapa.tem_esconde:  # o final verdadeiro
+            r.draw_ui_rect(0, 0, int(w), int(h), (232, 228, 218, int(255 * k)))
+            linhas = (("achei voce.", 34, (40, 34, 30)),
+                      ("Ela pegou o omamori e segurou a sua mao.", 16, (60, 30, 28)),
+                      ("Do outro lado do rio, ninguem mais esta contando.", 15, (60, 50, 70)),
+                      ("fim", 14, (110, 100, 96)))
+        elif self._levou:
+            r.draw_ui_rect(0, 0, int(w), int(h), (0, 0, 0, int(255 * k)))
+            linhas = (("amanheceu. voce saiu da floresta.", 26, (200, 190, 180)),
+                      ("Mas alguem ficou no torii, de olhos fechados, contando.", 16, (200, 60, 50)),
+                      ("um. dois. tres. quatro...", 15, (150, 140, 130)),
+                      ("a corrente continua com sete.", 13, (110, 100, 96)))
+        else:
+            r.draw_ui_rect(0, 0, int(w), int(h), (226, 220, 206, int(255 * k)))
+            linhas = (("amanheceu", 34, (40, 34, 30)),
+                      ("Voce deixou o oitavo no altar. Em todas as noites.", 16, (60, 30, 28)),
+                      ("Ao longe, um rio. Ela ainda esta escondida.", 15, (60, 50, 70)))
+        for i, (texto, tam, cor) in enumerate(linhas):
+            _centro(r, w / 2, h / 2 - 80 + (0 if i == 0 else 20 + i * 30), texto, tam, (*cor, int(255 * k)))
+        _centro(r, w / 2, h / 2 + 80, f"ESPACO: {self._depois()}", 14, (120, 110, 104, int(255 * k)))
+
     def _depois(self) -> str:
+        if self.mapa.tem_esconde:
+            return "voltar ao menu"
         return "a noite seguinte" if self.modo == "campanha" else "voltar ao menu"
 
     @staticmethod

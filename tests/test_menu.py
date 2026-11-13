@@ -41,7 +41,7 @@ def test_o_menu_comum_e_o_de_desenvolvedor():
     assert menu.itens(False, None) == ["nova", "sair"]
     assert menu.itens(False, {"noite_n": 2}) == ["continuar", "nova", "sair"]
     dev = menu.itens(True, None)
-    assert dev[:2] == ["nova", "sair"] and "noite:3" in dev and "espelhado" in dev and "imortal" in dev
+    assert dev[:2] == ["nova", "sair"] and "noite" in dev and "espelhado" in dev and "imortal" in dev
 
 
 def test_a_campanha_fica_salva_e_continua_de_onde_parou():
@@ -75,3 +75,34 @@ def test_trapacas_nao_morrer_pilha_e_filme():
     assert e.pego <= 0 and e.pilha == 1.0 and e.filme == regras.FILME
     regras.reiniciar(e)
     assert e.imortal  # a trapaca sobrevive ao recomeco
+
+
+def test_as_mortes_contam_e_a_noite_trancada_fica_salva(progresso_temporario):
+    assert progresso.mortes("vulto") == 0
+    assert progresso.morreu("vulto") == 1 and progresso.morreu("vulto") == 2 and progresso.mortes("vulto") == 2
+    assert progresso.trancada() is None
+    progresso.trancar(5)
+    assert progresso.trancada() == 5
+    progresso.destrancar()
+    assert progresso.trancada() is None and progresso.mortes("vulto") == 2
+
+
+def test_a_campanha_lembra_se_voce_levou_o_oitavo(progresso_temporario):
+    progresso.salvar_campanha(2, 0.0, {})
+    assert progresso.campanha()["levou_oitavo"] is False
+    progresso.salvar_campanha(3, 0.0, {}, True)
+    assert progresso.campanha()["levou_oitavo"] is True
+
+
+def test_os_finais_ficam_salvos(progresso_temporario):
+    assert progresso.fins() == set()
+    progresso.marcar_fim("falso")
+    progresso.marcar_fim("verdadeiro")
+    progresso.marcar_fim("falso")
+    assert progresso.fins() == {"falso", "verdadeiro"}
+
+
+def test_o_pesadelo_aparece_depois_de_um_final():
+    assert "pesadelo" not in menu.itens(False, None)
+    assert menu.itens(False, None, {"falso"}) == ["nova", "pesadelo", "sair"]
+    assert "pesadelo" not in menu.itens(False, {"noite_n": 9}, {"falso"})  # ja esta nele

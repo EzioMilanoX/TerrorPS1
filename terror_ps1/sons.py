@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 
 TAXA = 22050
-VERSAO = "7"
+VERSAO = "9"
 
 
 def _ruido(n: int, rng) -> np.ndarray:
@@ -128,6 +128,29 @@ def forca(rng) -> np.ndarray:
     n = int(0.25 * TAXA)
     t = np.arange(n) / TAXA
     return np.sin(2 * np.pi * (300 + 200 * np.sin(2 * np.pi * 23 * t)) * t) * _env(n, 0.02, 0.08) + 0.3 * _ruido(n, rng) * _env(n, 0.01, 0.05)
+
+
+def roda(rng) -> np.ndarray:
+    """A musica da roda: tres criancas cantarolando, sem palavras e nao muito afinadas, uma
+    melodia de cinco notas, devagar. A ultima nota fica no ar, sem resolver (~7,6 s)."""
+    notas = ((0, 1), (3, 1), (5, 1), (3, 1), (0, 2), (-2, 1), (0, 1), (3, 1), (7, 1), (5, 2), (3, 1), (0, 1),
+             (3, 1), (5, 3))
+    batida = 0.42
+    total = sum(d for _, d in notas) * batida + 0.4
+    n = int(total * TAXA)
+    som = np.zeros(n)
+    inicio = 0.0
+    for semi, dur in notas:
+        f0 = 392.0 * 2 ** (semi / 12)
+        i0, i1 = int(inicio * TAXA), min(n, int((inicio + dur * batida + 0.08) * TAXA))
+        tt = np.arange(i1 - i0) / TAXA
+        env = np.minimum(1.0, tt / 0.06) * np.minimum(1.0, (tt[-1] - tt) / 0.08 + 1e-3)
+        for k, desafina in enumerate((1.0, 1.006, 0.993)):
+            vib = 1 + 0.008 * np.sin(2 * np.pi * (5.0 + k * 0.7) * tt)
+            fase = 2 * np.pi * f0 * desafina * np.cumsum(vib) / TAXA
+            som[i0:i1] += (np.sin(fase) + 0.3 * np.sin(2 * fase)) * env * 0.33
+        inicio += dur * batida
+    return som + _passa_baixa(_ruido(n, rng), 0.05) * 0.05
 
 
 def amanhecer(rng) -> np.ndarray:
@@ -366,7 +389,7 @@ SONS: dict[str, Callable] = {"passo": passo, "clique": clique, "batida": batida,
                              "tilintar": tilintar, "graveto": graveto, "sinalizador": sinalizador, "chiado": chiado,
                              "foto": foto, "chuva": chuva, "passinhos": passinhos, "estalos": estalos,
                              "esconder": esconder, "agua": agua, "cego_passo": cego_passo, "gemido": gemido,
-                             "sapos": sapos, "choro": choro, "corte": corte, "farejar": farejar}
+                             "sapos": sapos, "choro": choro, "corte": corte, "farejar": farejar, "roda": roda}
 
 
 def _salvar(caminho: Path, som: np.ndarray) -> None:

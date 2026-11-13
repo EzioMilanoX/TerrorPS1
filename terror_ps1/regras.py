@@ -125,10 +125,11 @@ AYAME_SOME = 7.0  # chegou perto assim, ela some
 AYAME_DURA = 7.0
 AYAME_LEVA_AO_AMULETO = 0.6  # o resto das vezes, a uma armadilha
 
-# a pequena: o contrario dele -- so anda quando a luz esta nela
-PEQUENA_APARECE = 5  # omamori
+# a pequena: tem medo do escuro -- vem para a luz. Lanterna acesa: ela vem; a luz nela: vem correndo
+PEQUENA_APARECE = 5  # omamori (o padrao do Mapa; a escola usa `Mapa.pequena_aparece`)
 PEQUENA_PASSO = 0.9
-PEQUENA_INTERVALO = 0.45
+PEQUENA_INTERVALO = 0.45  # com a luz nela
+PEQUENA_INTERVALO_LONGE = 1.4  # com a lanterna acesa, mas a luz em outro lugar
 PEQUENA_PEGA = 1.0
 
 # a noite
@@ -152,7 +153,34 @@ CEGO_PROCURA = 10.0  # sem som, ele vaga por perto de onde esta...
 CEGO_DERIVA = 1 / 3  # ...puxando um terco do caminho para o seu lado (ele nao sabe onde: a area dele chega perto)
 
 # as noites, em ordem; depois da ultima, recomecam espelhadas
-FASES = ("floresta", "arrozal", "aldeia", "bambuzal")
+FASES = ("floresta", "arrozal", "aldeia", "bambuzal", "cemiterio", "escola", "torii")
+
+# a setima noite: a roda (Kagome). Os seis em volta de voce, de olhos fechados; quando a musica
+# para, um deles esta atras. Pelo som voce sabe quem e, e faz o que a regra dele pede.
+RODA_QUEM = ("vulto", "cego", "imitadora", "farejador", "fantoche", "pequena")  # o setimo lugar: o seu
+RODA_PERTO = 2.5  # chegou assim perto do meio da clareira: a roda fecha
+RODA_CANTO = 8.0  # a musica: olhos fechados, parado
+RODA_GIRA = 0.5  # a roda gira (rad/s) enquanto cantam
+RODA_RAIO = 3.0
+RODA_ATRAS = 1.3  # quem fica atras de voce, a esta distancia
+RODA_JANELA = 7.0  # para responder, depois que a musica para
+RODA_SOM_CADA = 1.6  # quem esta atras se faz ouvir
+RODA_VIRADO = math.radians(35)  # a falsa: virado para ela...
+RODA_ENCARAR = 0.8  # ... tanto tempo
+RODA_AR = 2.5  # o Cego: prender o ar, sem se mexer nem fazer barulho
+RODA_ESCURO = 4.0  # a pequena: tanto tempo no escuro
+RODA_AGACHAR = 1.5  # ela, a de luto: segurar abaixado
+RODA_LONGE = 3.0  # o Farejador: sair de onde voce estava
+RODA_MOSTRA = 2.5  # acertou: os olhos abrem e ele esta ali
+RODA_PESADELO = 0.6  # no pesadelo, a janela para responder encolhe
+
+# a noite secreta (Sai no Kawara): so para quem deixou o oitavo em todas as noites. Sem monstro:
+# a Ayame escondida. Se a luz acha ela de longe, nao vale -- ela corre e se esconde de novo.
+SECRETA = "rio"
+ESCONDE_PERTO = 4.0  # mais perto que isso, a luz nela ja vale
+ESCONDE_VEL = 3.2
+ESCONDE_CANTA = 8.5  # ela cantarola a musica da roda, de tempos em tempos
+ACHAR = 1.8  # perto assim, ESPACO: "achei voce"
 
 # o Farejador (o bambuzal): so segue o seu sangue, gota por gota, na ordem em que caiu
 SANGRA = 14.0  # segundos sangrando depois de um corte
@@ -173,6 +201,20 @@ IMITA_PEGA = 1.2
 IMITA_VIDA = 25.0
 
 # o fim
+# o cemiterio: o Fantoche (uma regra: so cai com a luz nas costas, na coisa)
+FANTOCHE_VEL = 1.5  # sempre na sua direcao: mais devagar que voce andando, mais rapido que voce carregado
+FANTOCHE_GIRO = 0.6  # rad/s: ela vira devagar -- quem passa do lado dela fica atras
+FANTOCHE_PARA = math.radians(50)  # virada mais que isso para longe de voce, ela so gira
+FANTOCHE_PEGA = 1.2
+FANTOCHE_CAIDA = 18.0  # segundos no chao depois que a luz pega a coisa
+COSTAS = 0.3  # onde a coisa esta: atras dela, na altura do ombro
+COISA_ALTURA = 1.25
+# agarrado (so o Fantoche agarra): segure agachar, depois chute (aperte correr)
+AGARRADO_TEMPO = 5.0
+AGARRADO_SEGURAR = 1.0
+AGARRADO_CHUTES = 8
+SOLTOU_EMPURRA = 2.0
+
 LEVOU_LONGE = 12.0  # levando o oitavo, longe assim do santuario a noite acaba do outro jeito
 
 
@@ -296,6 +338,30 @@ class Estado:
     relogio_fareja: float = 0.0
     # a aldeia
     imitadora: list[float] | None = None  # [x, z, vida]
+    # a noite secreta: a Ayame escondida
+    escondida: int = -1  # em qual dos `Mapa.esconde_lugares` (-1: ainda nao escolheu)
+    escondida_corre: list | None = None  # [x, z] enquanto ela corre para o lugar novo
+    relogio_canta: float = 0.0
+    # o torii: a roda
+    roda: str = ""  # "" | "canto" | "atras" | "acertou" | "vazio" | "fim"
+    roda_falta: list = field(default_factory=list)  # quem ainda esta na roda
+    roda_quem: str = ""  # quem esta atras de voce
+    roda_t: float = 0.0
+    roda_de: tuple[float, float, float] | None = None  # onde voce estava (x, z, giro) quando a musica parou
+    roda_meio: tuple[float, float] | None = None  # o meio da roda
+    roda_ang: float = 0.0
+    roda_conta: float = 0.0  # o quanto da resposta voce ja deu
+    roda_som: float = 0.0
+    roda_visto: tuple[float, float] | None = None  # acertou: os olhos abrem e ele esta na sua frente
+    # o cemiterio
+    fantoche: list[float] | None = None  # [x, z, rumo] (rumo: para onde o rosto dela aponta)
+    fantoche_acordou: bool = False
+    fantoche_caida: float = 0.0  # >0: no chao, segundos ate a coisa a levantar
+    relogio_fantoche: float = 0.0
+    agarrado: float = 0.0  # >0: ela te agarrou -- segundos para se soltar
+    segurou: float = 0.0  # quanto ja segurou abaixado
+    chutes: int = 0
+    correr_antes: bool = False
     espera_imita: float = IMITA_ESPERA[0]
     rng: random.Random = field(default_factory=lambda: random.Random(13), repr=False)
 
@@ -324,6 +390,9 @@ class Estado:
                 self.cego = m.cego_inicio
             if m.tem_farejador:
                 self.farejador = m.farejador_inicio
+            if m.tem_fantoche:
+                fx, fz = m.fantoche_inicio
+                self.fantoche = [fx, fz, _rumo((fx, fz), (self.x, self.z))]
 
     @property
     def total_amuletos(self) -> int:
@@ -343,6 +412,8 @@ class Estado:
             y = self.mapa.esconderijos[self.escondido][2]
         elif self.na_agua:
             y -= AFUNDA_OLHOS[self.na_agua]
+        if self.agarrado > 0:  # derrubado, no chao
+            y = 0.45
         return (self.x, y, self.z)
 
     def luz_ligada(self) -> bool:
@@ -392,9 +463,20 @@ class Estado:
     def dist_imitadora(self) -> float:
         return math.hypot(self.x - self.imitadora[0], self.z - self.imitadora[1]) if self.imitadora else 1e9
 
+    def dist_pequena(self) -> float:
+        if self.pequena is None:
+            return 1e9
+        return math.hypot(self.x - self.pequena[0], self.z - self.pequena[1])
+
+    def dist_fantoche(self) -> float:
+        if not self.fantoche or not self.fantoche_acordou:
+            return 1e9
+        return math.hypot(self.x - self.fantoche[0], self.z - self.fantoche[1])
+
     def dist_ameaca(self) -> float:
         """A distancia do monstro mais perto (o coracao, o silencio e a imagem suja usam esta)."""
-        return min(self.dist_vulto(), self.dist_cego(), self.dist_imitadora(), self.dist_farejador())
+        return min(self.dist_vulto(), self.dist_cego(), self.dist_imitadora(), self.dist_farejador(),
+                   self.dist_fantoche(), self.dist_pequena())
 
 
 def _rumo(de: tuple[float, float], para: tuple[float, float]) -> float:
@@ -450,6 +532,14 @@ def atualizar(e: Estado, dt: float, frente: float, lado: float, girar: float, al
     if e.pilha_infinita:
         e.pilha = 1.0
     if e.venceu:
+        return
+    chutou = correr and not e.correr_antes  # apertou agora (para chutar, agarrado)
+    e.correr_antes = correr
+    if e.agarrado > 0:  # agarrado: so isso importa
+        _agarrado(e, dt, agachar, chutou)
+        return
+    if e.roda in ("canto", "vazio"):  # a roda: olhos fechados, parado, so a musica
+        _roda(e, dt, alternar_luz, agachar)
         return
     e.relogio_noite += dt
     e.desde_pista += dt
@@ -514,6 +604,12 @@ def atualizar(e: Estado, dt: float, frente: float, lado: float, girar: float, al
         if e.mapa.tem_farejador:
             _sangrar(e, dt)
             _farejador(e, dt)
+        if e.mapa.tem_fantoche:
+            _fantoche(e, dt)
+        if e.mapa.tem_roda:
+            _roda(e, dt, alternar_luz, agachar)
+        if e.mapa.tem_esconde:
+            _esconde(e, dt)
     if e.mapa is None or e.mapa.tem_vulto:
         _vulto(e, dt)
 
@@ -703,6 +799,10 @@ def _usar(e: Estado) -> bool:
         e.escondido, e.fora, e.achado = None, None, False
         e.eventos.append("saiu")
         return True
+    if pode_achar(e):  # a noite secreta: achei voce
+        e.venceu, e.fim = True, "achou"
+        e.eventos += ["achou", "venceu"]
+        return True
     if e.oitavo == "altar" and math.hypot(e.x - SANTUARIO[0], e.z - SANTUARIO[1]) < 4.0:
         e.venceu, e.fim = True, "amanhecer"
         e.eventos.append("venceu")
@@ -801,9 +901,10 @@ def _ayame(e: Estado, dt: float) -> None:
 
 
 def _pequena(e: Estado, dt: float) -> None:
-    """O contrario dele: so anda quando a luz esta nela."""
+    """Ela tem medo do escuro: vem para a luz. Lanterna acesa, ela vem devagar; a luz nela, ela vem
+    correndo. Apagada, ela para. Passa pelas paredes."""
     if e.pequena is None:
-        if e.coletados >= PEQUENA_APARECE:
+        if e.coletados >= e.mapa.pequena_aparece:
             fx, _, fz = direcao(e.giro)
             e.pequena = (e.x - fx * 12.0, e.z - fz * 12.0)  # atras de voce
             e.eventos.append("pequena")
@@ -816,7 +917,10 @@ def _pequena(e: Estado, dt: float) -> None:
         return
     no_sinal = e.sinal > 0 and e.sinal_pos is not None and math.hypot(px - e.sinal_pos[0], pz - e.sinal_pos[1]) < SINAL_RAIO
     e.relogio_pequena += dt
-    if (e.iluminando((px, 0.35, pz)) or no_sinal) and e.relogio_pequena >= PEQUENA_INTERVALO and d > 1e-6:
+    na_luz = e.iluminando((px, 0.35, pz)) or no_sinal
+    acesa = e.luz_ligada() and forca_da_luz(e) >= 0.3
+    intervalo = PEQUENA_INTERVALO if na_luz else PEQUENA_INTERVALO_LONGE
+    if (na_luz or acesa) and e.relogio_pequena >= intervalo and d > 1e-6:
         e.relogio_pequena = 0.0
         passo = min(PEQUENA_PASSO, d)
         e.pequena = (px + (e.x - px) / d * passo, pz + (e.z - pz) / d * passo)
@@ -940,14 +1044,231 @@ def _imitadora(e: Estado, dt: float) -> None:
             e.imitadora = None
 
 
+def costas_do_fantoche(e: Estado) -> tuple[float, float, float]:
+    """Onde a coisa esta: nas costas dela, na altura do ombro."""
+    fx, fz, rumo = e.fantoche
+    return (fx - math.sin(rumo) * COSTAS, COISA_ALTURA, fz - math.cos(rumo) * COSTAS)
+
+
+def _fantoche(e: Estado, dt: float) -> None:
+    """A regra dela, so ela: ela sempre sabe onde voce esta e vem, virando devagar. So cai quando
+    a luz pega a coisa nas costas dela -- e voce tem que estar atras para isso. De frente, a luz
+    bate no rosto da morta, e nada acontece. Encostou, agarra."""
+    if e.fantoche is None:
+        return
+    if not e.fantoche_acordou:  # deitada ate voce pegar o primeiro omamori
+        if e.coletados == 0:
+            return
+        e.fantoche_acordou = True
+        e.fantoche_caida = 0.0
+        e.eventos.append("fantoche_acorda")
+    fx, fz, rumo = e.fantoche
+    if e.fantoche_caida > 0:
+        e.fantoche_caida -= dt
+        if e.fantoche_caida <= 0:
+            e.eventos.append("fantoche_levanta")
+        return
+    atras = (e.x - fx) * math.sin(rumo) + (e.z - fz) * math.cos(rumo) < 0
+    if atras and e.iluminando(costas_do_fantoche(e)):
+        e.fantoche_caida = FANTOCHE_CAIDA
+        e.eventos.append("fantoche_cai")
+        return
+    alvo = _rumo((fx, fz), (e.x, e.z))
+    falta = (alvo - rumo + math.pi) % (2 * math.pi) - math.pi
+    rumo += max(-FANTOCHE_GIRO * dt, min(FANTOCHE_GIRO * dt, falta))
+    if abs(falta) < FANTOCHE_PARA:
+        fx, fz = fx + math.sin(rumo) * FANTOCHE_VEL * dt, fz + math.cos(rumo) * FANTOCHE_VEL * dt
+        e.relogio_fantoche += dt
+        if e.relogio_fantoche >= 0.9:
+            e.relogio_fantoche = 0.0
+            e.eventos.append("fantoche_passo")
+    e.fantoche = [fx, fz, rumo]
+    if e.dist_fantoche() < FANTOCHE_PEGA and e.pego <= 0:
+        e.agarrado, e.segurou, e.chutes = AGARRADO_TEMPO, 0.0, 0
+        e.preso, e.escondido = 0.0, None
+        e.eventos.append("agarrou")
+
+
+def _agarrado(e: Estado, dt: float, agachar: bool, chutou: bool) -> None:
+    """Ela te derrubou e puxa. Segure abaixado (para nao ser levantado), depois chute ate soltar.
+    O tempo acabou: ela te levou. Soltou: ela cai, e voce e empurrado para longe."""
+    e.agarrado -= dt
+    if e.segurou < AGARRADO_SEGURAR:
+        e.segurou = e.segurou + dt if agachar else max(0.0, e.segurou - dt * 0.5)
+    elif chutou:
+        e.chutes += 1
+        e.eventos.append("chute")
+    if e.chutes >= AGARRADO_CHUTES:
+        _soltou(e)
+    elif e.agarrado <= 0:
+        e.agarrado = 0.0
+        if not _pegar(e, "fantoche"):  # a trapaca de nao morrer: solta mesmo assim
+            _soltou(e)
+
+
+def _soltou(e: Estado) -> None:
+    e.agarrado = 0.0
+    fx, fz, rumo = e.fantoche
+    d = math.hypot(e.x - fx, e.z - fz) or 1.0
+    x, z = e.x + (e.x - fx) / d * SOLTOU_EMPURRA, e.z + (e.z - fz) / d * SOLTOU_EMPURRA
+    lim = e.mapa.limite
+    e.x, e.z = colidir(x, z, e.mapa.circulos_perto(x, z), e.mapa.caixas, (-lim, lim, -lim, lim))
+    e.fantoche_caida = FANTOCHE_CAIDA
+    e.eventos.append("soltou")
+
+
 def _pegar(e: Estado, quem: str) -> bool:
     """Alguem te alcancou. O unico lugar que marca "pego" -- e onde a trapaca de nao morrer
     atua. Devolve se pegou."""
     if e.imortal or e.pego > 0:
         return False
-    e.pego, e.quem_pegou = 2.0, quem
+    e.pego, e.quem_pegou = PEGO_DURA, quem
     e.eventos.append("pegou")
     return True
+
+
+def ayame_escondida(e: Estado) -> tuple[float, float] | None:
+    """Onde ela esta, na noite secreta (correndo, ou no esconderijo)."""
+    if e.mapa is None or not e.mapa.tem_esconde or e.escondida < 0:
+        return None
+    if e.escondida_corre is not None:
+        return e.escondida_corre[0], e.escondida_corre[1]
+    return e.mapa.esconde_lugares[e.escondida]
+
+
+def pode_achar(e: Estado) -> bool:
+    p = ayame_escondida(e)
+    return p is not None and e.escondida_corre is None and math.hypot(e.x - p[0], e.z - p[1]) < ACHAR
+
+
+def _esconde(e: Estado, dt: float) -> None:
+    """A noite secreta. Ela esta escondida atras de uma das pedras grandes e cantarola. Se a luz
+    acha ela de longe, nao vale: ela corre e se esconde em outro lugar. Chegue perto no escuro."""
+    lugares = e.mapa.esconde_lugares
+    if e.escondida < 0:
+        e.escondida = e.rng.randrange(len(lugares))
+        e.relogio_canta = ESCONDE_CANTA - 2.0
+        return
+    if e.escondida_corre is not None:
+        x, z = e.escondida_corre
+        tx, tz = lugares[e.escondida]
+        d = math.hypot(tx - x, tz - z)
+        passo = min(ESCONDE_VEL * dt, d)
+        if d <= passo + 1e-6:
+            e.escondida_corre = None
+        else:
+            e.escondida_corre = [x + (tx - x) / d * passo, z + (tz - z) / d * passo]
+        return
+    x, z = lugares[e.escondida]
+    e.relogio_canta += dt
+    if e.relogio_canta >= ESCONDE_CANTA:
+        e.relogio_canta = 0.0
+        e.eventos.append("ayame_cantarola")
+    if math.hypot(e.x - x, e.z - z) > ESCONDE_PERTO and e.iluminando((x, 0.7, z)):  # de longe nao vale
+        e.escondida_corre = [x, z]
+        e.escondida = e.rng.choice([i for i in range(len(lugares)) if i != e.escondida])
+        e.eventos.append("ayame_corre")
+
+
+def atras_na_roda(e: Estado) -> tuple[float, float]:
+    """Onde esta quem ficou atras de voce: atras de onde voce estava quando a musica parou."""
+    x, z, g = e.roda_de or (e.x, e.z, e.giro)
+    fx, _, fz = direcao(g)
+    return x - fx * RODA_ATRAS, z - fz * RODA_ATRAS
+
+
+def roda_lugares(e: Estado) -> list[tuple[str, float, float]]:
+    """Quem esta na roda e onde: sete lugares em volta do meio, girando; o setimo sempre vazio.
+    Quem foi achado sai da roda; na ultima volta (e depois) os seis voltam. Quem esta atras de
+    voce nao aparece; quando voce acerta, ele esta na sua frente."""
+    if not e.roda or e.roda_meio is None:
+        return []
+    cx, cz = e.roda_meio
+    membros = RODA_QUEM if e.roda in ("vazio", "fim") else e.roda_falta
+    lugares = []
+    for k, quem in enumerate(RODA_QUEM):
+        if quem in membros:
+            a = e.roda_ang + 2 * math.pi * k / 7
+            lugares.append((quem, cx + math.sin(a) * RODA_RAIO, cz + math.cos(a) * RODA_RAIO))
+    if e.roda == "acertou" and e.roda_visto is not None:
+        lugares.append((e.roda_quem, *e.roda_visto))
+    return lugares
+
+
+def _roda_canta(e: Estado, vazio: bool = False) -> None:
+    e.roda, e.roda_t, e.roda_meio = ("vazio" if vazio else "canto"), 0.0, (e.x, e.z)
+    e.acesa = False  # olhos fechados
+    e.eventos.append("roda_canta")
+
+
+def _roda(e: Estado, dt: float, clicou: bool, agachar: bool) -> None:
+    """A roda: chegou ao meio da clareira, ela fecha. Cada volta: a musica (olhos fechados), e
+    quando ela para, um deles esta atras de voce. Acertar o que a regra dele pede tira ele da
+    roda; errar, ou demorar, e ele te leva. Na ultima volta, atras de voce nao ha ninguem: o
+    setimo lugar e o seu. Depois, o oitavo no altar."""
+    if not e.roda:
+        cx, cz = e.mapa.roda_centro or e.mapa.santuario
+        if math.hypot(e.x - cx, e.z - cz) < RODA_PERTO:
+            e.roda_falta = list(RODA_QUEM)
+            e.rng.shuffle(e.roda_falta)
+            _roda_canta(e)
+        return
+    e.roda_t += dt
+    if e.roda in ("canto", "vazio"):
+        e.roda_ang += RODA_GIRA * dt
+        if e.roda_t < RODA_CANTO:
+            return
+        if e.roda == "vazio":  # atras de voce: ninguem
+            e.roda, e.roda_t, e.oitavo = "fim", 0.0, "altar"
+            e.eventos += ["roda_vazia", "oitavo"]
+            return
+        e.roda, e.roda_t, e.roda_conta, e.roda_som = "atras", 0.0, 0.0, RODA_SOM_CADA - 0.3
+        e.roda_quem = e.roda_falta.pop(0)
+        e.roda_de = (e.x, e.z, e.giro)
+        e.eventos.append("roda_para")
+        return
+    if e.roda == "acertou":
+        if e.roda_t >= RODA_MOSTRA:
+            _roda_canta(e, vazio=not e.roda_falta)
+        return
+    if e.roda != "atras":
+        return
+    e.roda_som += dt
+    janela = RODA_JANELA * (RODA_PESADELO if e.mapa.fogo else 1.0)
+    if e.roda_som >= RODA_SOM_CADA:
+        e.roda_som = 0.0
+        e.eventos.append("roda_som")
+    quem, (qx, qz) = e.roda_quem, atras_na_roda(e)
+    x0, z0, _ = e.roda_de
+    mexeu = math.hypot(e.x - x0, e.z - z0)
+    acertou = errou = False
+    if quem == "vulto":  # so anda fora da luz: acenda a luz nele
+        acertou = e.iluminando((qx, 1.4, qz))
+    elif quem == "imitadora":  # de costas ela corre: vire e olhe para ela
+        dx, dz = qx - e.x, qz - e.z
+        fx, _, fz = direcao(e.giro)
+        if (dx * fx + dz * fz) / (math.hypot(dx, dz) or 1.0) > math.cos(RODA_VIRADO):
+            e.roda_conta += dt
+        acertou = e.roda_conta >= RODA_ENCARAR
+    elif quem == "pequena":  # vem para a luz: fique no escuro
+        errou = e.luz_ligada()
+        acertou = not errou and e.roda_t >= RODA_ESCURO
+    elif quem == "cego":  # ouve tudo: nao se mexa, nem a lanterna; prenda o ar
+        errou = mexeu > 0.3 or clicou or e.correndo
+        if e.segurando:
+            e.roda_conta += dt
+        acertou = not errou and e.roda_conta >= RODA_AR
+    elif quem == "fantoche":  # agarrou: segure abaixado
+        if agachar:
+            e.roda_conta += dt
+        acertou = e.roda_conta >= RODA_AGACHAR
+    elif quem == "farejador":  # segue o rastro, nao voce: saia de onde voce esta
+        acertou = mexeu >= RODA_LONGE
+    if acertou or ((errou or e.roda_t >= janela) and not _pegar(e, quem)):  # nao morrer: conta como acerto
+        fx, _, fz = direcao(e.giro)
+        e.roda, e.roda_t, e.acesa = "acertou", 0.0, True  # os olhos abrem, a luz acende: ele, na sua frente
+        e.roda_visto = (e.x + fx * 1.8, e.z + fz * 1.8)
+        e.eventos.append("roda_acertou")
 
 
 def _vulto_ouviu(e: Estado) -> None:
@@ -1226,6 +1547,8 @@ def nome_do_jizo(e: Estado) -> str | None:
     return None
 
 
+PEGO_DURA = 3.0  # a tela de "pego" (os primeiros 1,3 s, o vulto: o rosto dele)
+
 PERSISTE = ("mapa", "tempo", "eventos", "rng", "noite_n", "espelho", "aprendeu_base", "memoria", "jizo_entrada",
             "imortal", "pilha_infinita", "filme_infinito", "dev")
 
@@ -1246,12 +1569,14 @@ def bioma_da_noite(n: int) -> tuple[str, bool]:
     return FASES[(n - 1) % len(FASES)], ((n - 1) // len(FASES)) % 2 == 1
 
 
-def estado_da_noite(noite_n: int, aprendeu_base: float = 0.0, memoria: dict | None = None) -> Estado:
+def estado_da_noite(noite_n: int, aprendeu_base: float = 0.0, memoria: dict | None = None,
+                    secreta: bool = False) -> Estado:
     """O comeco de uma noite qualquer (pelo menu, ou continuando a campanha): o mapa dela,
-    espelhado ou nao, o jizo na entrada da floresta, e o que ele ja sabe de voce."""
+    espelhado ou nao, o jizo na entrada da floresta, e o que ele ja sabe de voce. `secreta`: a
+    noite do rio, no lugar da noite `noite_n`."""
     from terror_ps1 import mapa as m
-    bioma, espelho = bioma_da_noite(noite_n)
-    e = Estado(mapa=m.gerar(bioma))
+    bioma, espelho = (SECRETA, False) if secreta else bioma_da_noite(noite_n)
+    e = Estado(mapa=m.pesadelo(m.gerar(bioma)) if espelho else m.gerar(bioma))
     e.noite_n, e.espelho = noite_n, espelho
     e.aprendeu_base, e.memoria = aprendeu_base, dict(memoria or {})
     if noite_n > 1 and bioma == "floresta":
@@ -1261,15 +1586,23 @@ def estado_da_noite(noite_n: int, aprendeu_base: float = 0.0, memoria: dict | No
     return e
 
 
-def proxima_noite(e: Estado) -> None:
+def noite_da_campanha(c: dict) -> Estado:
+    """A noite em que a campanha `c` (de `progresso.campanha()`) parou. Depois do torii, quem
+    nunca levou o oitavo vai para o rio."""
+    n = c["noite_n"]
+    secreta = n == len(FASES) + 1 and not c.get("levou_oitavo")
+    return estado_da_noite(n, c.get("aprendeu_base", 0.0), c.get("memoria", {}), secreta=secreta)
+
+
+def proxima_noite(e: Estado, secreta: bool = False) -> None:
     """Depois de um final: a noite seguinte. Outro mapa (os arrozais; depois as mesmas noites
-    espelhadas), um jizo na entrada da floresta, e ele lembra."""
+    espelhadas), um jizo na entrada da floresta, e ele lembra. `secreta`: o rio."""
     from terror_ps1 import mapa as m
     e.aprendeu_base = max(e.aprendeu, e.aprendeu_base, 0.6)
     e.noite_n += 1
-    bioma, e.espelho = bioma_da_noite(e.noite_n)
-    if e.mapa is not None and e.mapa.bioma != bioma:
-        e.mapa = m.gerar(bioma)
+    bioma, e.espelho = (SECRETA, False) if secreta else bioma_da_noite(e.noite_n)
+    if e.mapa is not None and (e.mapa.bioma != bioma or e.mapa.fogo != e.espelho):
+        e.mapa = m.pesadelo(m.gerar(bioma)) if e.espelho else m.gerar(bioma)
     if e.mapa is not None and e.mapa.bioma == "floresta":
         ix, iz = e.mapa.inicio
         e.jizo_entrada = [ix - 1.8, iz - 3.0, 0.0]

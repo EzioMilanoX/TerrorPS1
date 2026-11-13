@@ -10,6 +10,7 @@ from ouroboros.bootstrap.composition_root import CompositionRoot
 from ouroboros.bootstrap.engine_config import EngineConfig
 from ouroboros.bootstrap.game_loop import GameLoop
 
+from terror_ps1 import progresso, regras
 from terror_ps1.cena import TerrorScene
 from terror_ps1.menu import MenuScene
 
@@ -23,4 +24,8 @@ def build_game(config: EngineConfig) -> GameLoop:
 
     game_loop.reset_scenes(MenuScene(game_loop.input_provider, game_loop.renderer, game_loop.audio_engine,
                                      jogar=jogar, ao_sair=game_loop.stop))
+    trancada = progresso.trancada()
+    if trancada:  # a noite sem saida: fechar o jogo nao adiantou -- ele abre direto nela
+        c = progresso.campanha() or {}
+        jogar(regras.estado_da_noite(trancada, c.get("aprendeu_base", 0.0), c.get("memoria", {})), "campanha")
     return game_loop

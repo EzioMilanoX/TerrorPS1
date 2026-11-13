@@ -13,6 +13,7 @@ fora: sao malhas centradas na origem, desenhadas com matriz de modelo.
 """
 from __future__ import annotations
 
+import dataclasses
 import math
 import random
 from collections.abc import Callable
@@ -117,11 +118,20 @@ class Mapa:
     placas: list[tuple[P, str]] = field(default_factory=list)
     espantalhos: list[P] = field(default_factory=list)  # giram para voce, como os jizos
     tem_vulto: bool = True
-    tem_pequena: bool = True
+    tem_pequena: bool = False  # a floresta e so do vulto; a pequena e da escola (noite 6)
+    pequena_aparece: int = 5  # com quantos omamori ela aparece
+    tem_roda: bool = False  # a setima noite: a roda (Kagome)
+    roda_centro: P | None = None  # chegou aqui, a roda fecha
+    tem_esconde: bool = False  # a noite secreta: a Ayame escondida (esconde-esconde)
+    esconde_lugares: list[P] = field(default_factory=list)  # onde ela pode estar
+    fogo: bool = False  # o pesadelo: a noite pegando fogo (e dois monstros)
+    fogos: list[P] = field(default_factory=list)  # onde queima
     tem_cego: bool = False
     tem_imitadora: bool = False
     tem_farejador: bool = False
     farejador_inicio: P | None = None
+    tem_fantoche: bool = False
+    fantoche_inicio: P | None = None
     tocos: list[P] = field(default_factory=list)  # tocos de bambu em ponta: cortam quem pisa de pe
     estatua: str = "espantalho"  # o que se vira quando voce nao olha: "espantalho" ou "boneca"
     cego_inicio: P | None = None
@@ -148,6 +158,78 @@ class Mapa:
 HISTORIA = "Sua irma Ayame sumiu nesta floresta. Leve os 7 omamori ao santuario, ao norte, antes de amanhecer."
 
 
+# O pesadelo (depois de um final): as noites de novo, espelhadas, pegando fogo, e com um segundo
+# monstro que completa o primeiro -- fugir de um e se entregar ao outro.
+PARES = {"floresta": "pequena", "arrozal": "fantoche", "aldeia": "vulto", "bambuzal": "pequena",
+         "cemiterio": "imitadora", "escola": "fantoche"}
+PARES_TEXTO = {
+    "floresta": "Ele e a pequena: a luz segura ele e chama ela.",
+    "arrozal": "O Cego e ela, a de luto: para ficar atras dela e preciso correr, e o Cego ouve.",
+    "aldeia": "A falsa e ele: encarar ela e dar as costas para o escuro.",
+    "bambuzal": "O Farejador e a pequena: no escuro voce pisa nos tocos e sangra; com luz, ela vem.",
+    "cemiterio": "Ela, a de luto, e a falsa: ficar atras de uma e dar as costas para a outra.",
+    "escola": "A pequena e ela, a de luto: apagar para uma, acender nas costas da outra.",
+    "torii": "A roda: a mesma, com menos tempo para responder.",
+}
+FOGOS = 12
+PESADELO_PEQUENA = 2  # no pesadelo a pequena vem cedo: no 2o omamori
+
+
+def pesadelo(m: Mapa) -> Mapa:
+    """A mesma noite, no pesadelo: o segundo monstro (`PARES`), o fogo e a nevoa vermelha."""
+    m = dataclasses.replace(m, fogo=True, nevoa=(38 / 255, 16 / 255, 12 / 255), circulos=list(m.circulos),
+                            luzes=list(m.luzes))
+    quem = PARES.get(m.bioma)
+    longe = max(m.marcos.values(), key=lambda p: math.hypot(p[0] - m.inicio[0], p[1] - m.inicio[1]),
+                default=m.santuario)
+    if quem == "pequena":
+        m.tem_pequena, m.pequena_aparece = True, PESADELO_PEQUENA
+    elif quem == "fantoche":
+        m.tem_fantoche, m.fantoche_inicio = True, longe
+    elif quem == "vulto":
+        m.tem_vulto = True
+    elif quem == "imitadora":
+        m.tem_imitadora = True
+    rng = random.Random(m.bioma)
+    pontos = [p for t in m.trilhas for p in t]
+    tentativas = 0
+    while len(m.fogos) < FOGOS and pontos and tentativas < 400:  # ao lado das trilhas, longe do comeco
+        tentativas += 1
+        bx, bz = rng.choice(pontos)
+        a = rng.uniform(0, 2 * math.pi)
+        x, z = bx + math.cos(a) * rng.uniform(2.6, 4.5), bz + math.sin(a) * rng.uniform(2.6, 4.5)
+        if math.hypot(x - m.inicio[0], z - m.inicio[1]) < 8.0 or abs(x) > m.limite - 1 or abs(z) > m.limite - 1:
+            continue
+        if m.chao(x, z) or any(math.hypot(x - a_, z - b_) < 5.0 for a_, b_ in m.fogos):
+            continue
+        if any(math.hypot(x - mx, z - mz) < 3.0 for mx, mz in m.marcos.values()):
+            continue
+        if any(x0 - 1 < x < x1 + 1 and z0 - 1 < z < z1 + 1 for x0, z0, x1, z1 in m.caixas):
+            continue
+        m.fogos.append((x, z))
+        m.circulos.append((x, z, 0.6))
+        m.luzes.append(((x, 1.0, z), (1.6, 0.6, 0.15), 5.0))
+    m.montar_grade()
+    return m
+
+
+def geometria_fogo(m: Mapa) -> list[Tri]:
+    """O fogo: um tronco carbonizado e as chamas (emissivas), e brasas em volta."""
+    rng = random.Random(m.bioma + "fogo")
+    tris: list[Tri] = []
+    for x, z in m.fogos:
+        tris += bloco((x, 0, z), rng.uniform(1.2, 2.4), 0.3, 0.2, 0.3, (20, 14, 12))
+        for k in range(3):
+            cor = ((255, 110, 20), (255, 160, 40), (255, 220, 120))[k]
+            larg = 1.0 - k * 0.28
+            tris += bloco((x + rng.uniform(-0.15, 0.15), 0, z + rng.uniform(-0.15, 0.15)),
+                          rng.uniform(1.2, 2.2) - k * 0.35, larg, 0.05, larg * 0.8, cor, emissivo=True)
+        for _ in range(6):
+            bx, bz = x + rng.uniform(-1.4, 1.4), z + rng.uniform(-1.4, 1.4)
+            tris += bloco((bx, 0, bz), 0.05, 0.12, 0.12, 0.12, (200, 60, 10), emissivo=True)
+    return tris
+
+
 def gerar(bioma: str) -> Mapa:
     """O mapa de uma noite pelo nome do bioma."""
     if bioma == "arrozal":
@@ -159,6 +241,18 @@ def gerar(bioma: str) -> Mapa:
     if bioma == "bambuzal":
         from terror_ps1 import bambuzal
         return bambuzal.gerar_mapa()
+    if bioma == "rio":
+        from terror_ps1 import rio
+        return rio.gerar_mapa()
+    if bioma == "torii":
+        from terror_ps1 import torii
+        return torii.gerar_mapa()
+    if bioma == "escola":
+        from terror_ps1 import escola
+        return escola.gerar_mapa()
+    if bioma == "cemiterio":
+        from terror_ps1 import cemiterio
+        return cemiterio.gerar_mapa()
     return gerar_mapa()
 
 

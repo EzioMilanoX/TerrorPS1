@@ -27,7 +27,9 @@ from terror_ps1 import progresso, regras, sons
 _CIMA, _BAIXO, _ESQ, _DIR = ("frente",), ("tras",), ("girar_esq", "esquerda"), ("girar_dir", "direita")
 CODIGO = (_CIMA, _CIMA, _BAIXO, _BAIXO, _ESQ, _DIR, _ESQ, _DIR)
 ACOES_DO_CODIGO = sorted({a for passo in CODIGO for a in passo})
-NOME_BIOMA = {"floresta": "a floresta", "arrozal": "os arrozais", "aldeia": "a aldeia vazia", "bambuzal": "o bambuzal"}
+NOME_BIOMA = {"floresta": "a floresta", "arrozal": "os arrozais", "aldeia": "a aldeia vazia", "bambuzal": "o bambuzal",
+              "cemiterio": "o cemiterio do templo", "escola": "a escola", "torii": "o torii",
+              "rio": "a margem do rio"}
 NOME_NOITE = {1: "primeira noite", 2: "segunda noite", 3: "terceira noite", 4: "quarta noite", 5: "quinta noite",
               6: "sexta noite", 7: "setima noite", 8: "oitava noite"}
 TRAPACAS = (("imortal", "nao morrer"), ("pilha_infinita", "pilha infinita"), ("filme_infinito", "filme infinito"))
@@ -56,16 +58,21 @@ class Codigo:
         return False
 
 
-def nome_da_noite(n: int) -> str:
+def nome_da_noite(n: int, secreta: bool = False) -> str:
+    if secreta:
+        return f"noite secreta: {NOME_BIOMA[regras.SECRETA]}"
     bioma, espelho = regras.bioma_da_noite(n)
     return f"{NOME_NOITE.get(n, f'noite {n}')}: {NOME_BIOMA[bioma]}" + (" (espelhada)" if espelho else "")
 
 
-def itens(dev: bool, campanha: dict | None) -> list[str]:
-    """As linhas do menu, em ordem (ids; o texto sai de `texto_do_item`)."""
-    lista = (["continuar"] if campanha else []) + ["nova", "sair"]
+def itens(dev: bool, campanha: dict | None, fins: set[str] | frozenset = frozenset()) -> list[str]:
+    """As linhas do menu, em ordem (ids; o texto sai de `texto_do_item`). Depois de um final,
+    o pesadelo (se a campanha ja nao estiver nele)."""
+    no_pesadelo = campanha is not None and campanha.get("noite_n", 0) > len(regras.FASES)
+    lista = (["continuar"] if campanha else []) + ["nova"] + (["pesadelo"] if fins and not no_pesadelo else [])
+    lista += ["sair"]
     if dev:
-        lista += [f"noite:{i + 1}" for i in range(len(regras.FASES))] + ["espelhado"] + [k for k, _ in TRAPACAS]
+        lista += ["noite", "espelhado"] + [k for k, _ in TRAPACAS]  # a noite: A/D troca
     return lista
 
 
@@ -76,6 +83,7 @@ class MenuScene(IScene):
         self.jogar, self.ao_sair = jogar, ao_sair
         self.dev = False
         self.espelhado = False
+        self.noite_dev = 1  # a noite escolhida no modo dev (a ultima e a secreta)
         self.trapacas = {k: False for k, _ in TRAPACAS}
         self.sel = 0
         self.confirmar_nova = False
@@ -102,12 +110,15 @@ class MenuScene(IScene):
             self.sel = 0
             if self.audio is not None:
                 self.audio.play_one_shot("sino" if self.dev else "clique", 0.8)
-        lista = itens(self.dev, progresso.campanha())
+        lista = itens(self.dev, progresso.campanha(), progresso.fins())
         passo = int(e.is_action_pressed("tras")) - int(e.is_action_pressed("frente"))
         if passo:
             self.sel = (self.sel + passo) % len(lista)
             self.confirmar_nova = False
         self.sel %= len(lista)
+        lado = int(e.is_action_pressed("direita")) - int(e.is_action_pressed("esquerda"))
+        if lado and lista[self.sel] == "noite":
+            self.noite_dev = (self.noite_dev - 1 + lado) % (len(regras.FASES) + 1) + 1
         if e.is_action_pressed("soltar"):
             self._escolher(lista[self.sel])
 
@@ -116,17 +127,26 @@ class MenuScene(IScene):
         if item == "sair":
             self.ao_sair()
         elif item == "continuar" and campanha:
-            self._comecar(regras.estado_da_noite(campanha["noite_n"], campanha.get("aprendeu_base", 0.0),
-                                                 campanha.get("memoria", {})), "campanha")
+            self._comecar(regras.noite_da_campanha(campanha), "campanha")
+        elif item == "pesadelo":
+            if campanha and not self.confirmar_nova:  # tambem apaga a campanha em andamento
+                self.confirmar_nova = True
+                return
+            n = len(regras.FASES) + 1
+            progresso.salvar_campanha(n, 0.6, {}, True)  # levou_oitavo: no pesadelo o rio nao abre
+            self._comecar(regras.estado_da_noite(n, 0.6), "campanha")
         elif item == "nova":
             if campanha and not self.confirmar_nova:  # apagar o progresso pede um segundo aperto
                 self.confirmar_nova = True
                 return
             progresso.salvar_campanha(1, 0.0, {})
             self._comecar(regras.estado_da_noite(1), "campanha")
-        elif item.startswith("noite:"):
-            n = int(item.split(":")[1]) + (len(regras.FASES) if self.espelhado else 0)
-            self._comecar(regras.estado_da_noite(n), "livre")
+        elif item == "noite":
+            if self.noite_dev > len(regras.FASES):
+                self._comecar(regras.estado_da_noite(self.noite_dev, secreta=True), "livre")
+            else:
+                n = self.noite_dev + (len(regras.FASES) if self.espelhado else 0)
+                self._comecar(regras.estado_da_noite(n), "livre")
         elif item == "espelhado":
             self.espelhado = not self.espelhado
         elif item in self.trapacas:
@@ -143,17 +163,26 @@ class MenuScene(IScene):
     def texto_do_item(self, item: str) -> str:
         campanha = progresso.campanha()
         if item == "continuar" and campanha:
-            return f"Continuar -- {nome_da_noite(campanha['noite_n'])}"
+            n = campanha["noite_n"]
+            return f"Continuar -- {nome_da_noite(n, n == len(regras.FASES) + 1 and not campanha.get('levou_oitavo'))}"
         if item == "nova":
             return "Nova campanha -- apagar o progresso? (ESPACO de novo)" if self.confirmar_nova else "Nova campanha"
         if item == "sair":
             return "Sair"
-        if item.startswith("noite:"):
-            i = int(item.split(":")[1])
-            n = i + (len(regras.FASES) if self.espelhado else 0)
-            bioma, espelho = regras.bioma_da_noite(n)
+        if item == "pesadelo":
+            if self.confirmar_nova and campanha:
+                return "Pesadelo -- apagar a campanha? (ESPACO de novo)"
+            return "Pesadelo -- tudo de novo, espelhado, pegando fogo"
+        if item == "noite":
+            i = self.noite_dev
+            if i > len(regras.FASES):
+                bioma, espelho, nome = regras.SECRETA, False, "Noite secreta"
+            else:
+                bioma, espelho = regras.bioma_da_noite(i + (len(regras.FASES) if self.espelhado else 0))
+                nome = f"Noite {i}"
             feita = (bioma + (" espelhado" if espelho else "")) in progresso.concluidas()
-            return f"Noite {i}: {NOME_BIOMA[bioma]}" + (" (espelhada)" if espelho else "") + ("   - concluida" if feita else "")
+            return (f"< {nome}: {NOME_BIOMA[bioma]}" + (" (espelhada)" if espelho else "")
+                    + (" - concluida" if feita else "") + " >   A/D troca")
         if item == "espelhado":
             return f"Espelhado: {'sim' if self.espelhado else 'nao'}"
         nome = dict(TRAPACAS)[item]
@@ -167,7 +196,7 @@ class MenuScene(IScene):
         tremor = 0.85 + 0.15 * math.sin(self.tempo * 9.0) * math.sin(self.tempo * 2.3)  # a luz falhando
         _centro(r, w / 2, 96, "TERROR PS1", 44, (int(210 * tremor), int(196 * tremor), int(180 * tremor), 255))
         _centro(r, w / 2, 148, "Ayame sumiu na floresta. Sete omamori, um santuario, e ate amanhecer.", 14, APAGADO)
-        lista = itens(self.dev, progresso.campanha())
+        lista = itens(self.dev, progresso.campanha(), progresso.fins())
         y, passo = (190, 24) if self.dev else (200, 28)
         for i, item in enumerate(lista):
             if item == "noite:1":
