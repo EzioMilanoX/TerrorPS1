@@ -22,6 +22,7 @@ from ouroboros.bootstrap.scene import IScene
 from ouroboros.core.world import World
 from ouroboros.interfaces.audio_engine import IAudioEngine
 from ouroboros.interfaces.input_provider import IInputProvider
+from ouroboros.interfaces.malhas3d import Malha, juntar
 from ouroboros.interfaces.renderer import IRenderer
 from ouroboros.interfaces.renderer3d import (
     COR_AFIM,
@@ -29,11 +30,10 @@ from ouroboros.interfaces.renderer3d import (
     Iluminacao3D,
     Luz3D,
     translacao_e_giro_y,
-    triangulos_para_arrays,
 )
 
 from terror_ps1 import aldeia, arrozal, bambuzal, cemiterio, escola, malhas, mapa, progresso, regras, rio, sons, torii, verdades
-from terror_ps1.malhas import _altura_terra
+from terror_ps1.malhas import altura_terra
 
 NEVOA = (17 / 255, 18 / 255, 25 / 255)  # cinza-azulado: os troncos escuros recortam contra ela
 ESTILO_PS1 = Estilo3D(resolucao=(320, 180), tremor=True, modo_cor=COR_AFIM, fundo=NEVOA, neblina_cor=NEVOA,
@@ -81,12 +81,13 @@ def _quebrar(texto: str, largura: int) -> list[str]:
     return linhas + [linha]
 
 
-def _geometria(m: mapa.Mapa) -> list:
-    """Os triangulos do que nao se mexe, pelo bioma da noite."""
-    return {"arrozal": arrozal.geometria, "aldeia": aldeia.geometria,
-            "bambuzal": bambuzal.geometria, "cemiterio": cemiterio.geometria,
-            "escola": escola.geometria, "torii": torii.geometria,
-            "rio": rio.geometria}.get(m.bioma, mapa.geometria)(m) + (mapa.geometria_fogo(m) if m.fogo else [])
+def _geometria(m: mapa.Mapa) -> Malha:
+    """A malha do que nao se mexe, pelo bioma da noite."""
+    cenario = {"arrozal": arrozal.geometria, "aldeia": aldeia.geometria,
+               "bambuzal": bambuzal.geometria, "cemiterio": cemiterio.geometria,
+               "escola": escola.geometria, "torii": torii.geometria,
+               "rio": rio.geometria}.get(m.bioma, mapa.geometria)(m)
+    return juntar(cenario, mapa.geometria_fogo(m)) if m.fogo else cenario
 
 
 def _centro(r: IRenderer, x: float, y: float, texto: str, tam: int, cor) -> None:
@@ -113,8 +114,8 @@ class TerrorScene(IScene):
             raise RuntimeError('o jogo precisa do renderer "gl" (placa de video, ROADMAP M21 da engine)')
         self._malhas: list[int] = []  # tudo o que esta cena pos na placa de video (sai com ela)
 
-        def malha(tris):
-            return self._criar(*triangulos_para_arrays(tris))
+        def malha(m: Malha) -> int:
+            return self._criar(m.posicoes, m.cores, m.emissivo)
 
         self.cenario = malha(_geometria(self.mapa))
         self.m_espantalho = malha(arrozal.malha_espantalho())
@@ -185,7 +186,7 @@ class TerrorScene(IScene):
     def _y(self, x: float, z: float) -> float:
         chave = (round(x, 2), round(z, 2))
         if chave not in self._chao:
-            self._chao[chave] = _altura_terra(x, z)
+            self._chao[chave] = altura_terra(x, z)
         return self._chao[chave]
 
     def _chuva(self):
@@ -221,7 +222,8 @@ class TerrorScene(IScene):
         self.mapa = self.estado.mapa
         self.r3d.remover_malha(self.cenario)
         self._malhas.remove(self.cenario)
-        self.cenario = self._criar(*triangulos_para_arrays(_geometria(self.mapa)))
+        cenario = _geometria(self.mapa)
+        self.cenario = self._criar(cenario.posicoes, cenario.cores, cenario.emissivo)
         self._chao = {}
 
     def _lado(self, v: float) -> float:
@@ -322,9 +324,7 @@ class TerrorScene(IScene):
             lugares = list(self.mapa.marcos.values()) + [self.mapa.santuario]
             self._ir = (self._ir + 1) % len(lugares)
             x, z = lugares[self._ir]
-            lim = self.mapa.limite
-            s.x, s.z = regras.colidir(x + 2.0, z + 2.0, self.mapa.circulos_perto(x + 2.0, z + 2.0), self.mapa.caixas,
-                                      (-lim, lim, -lim, lim))
+            s.x, s.z = regras.assentar(self.mapa, x + 2.0, z + 2.0)
 
     def _desenhar_radar(self, r: IRenderer, w: float) -> None:
         """O radar do modo desenvolvedor: o mapa de cima, voce, os monstros e o ultimo barulho."""

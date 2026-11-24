@@ -17,7 +17,10 @@ from __future__ import annotations
 import math
 import random
 
-from terror_ps1.malhas import Tri, bloco, chao, cone, icosaedro, lanterna, torii
+from ouroboros.core.colisao3d import Relevo
+from ouroboros.interfaces.malhas3d import Malha, bloco, cone, esfera, juntar, terreno
+
+from terror_ps1.malhas import deformada, lanterna, torii
 from terror_ps1.mapa import (
     MADEIRA,
     MADEIRA_ESCURA,
@@ -26,6 +29,7 @@ from terror_ps1.mapa import (
     P,
     _arvore_seca,
     _pinheiro,
+    achatada,
     dist_segmento,
 )
 
@@ -143,7 +147,7 @@ def gerar_mapa(semente: int = 11) -> Mapa:
                ((-18.0, 0.5, -16.4), (1.0, 0.75, 0.35), 2.8),  # a vela no tumulo
                ((17.0, 2.5, -15.4), (0.55, 0.9, 0.7), 4.0),  # a lampada da casa da bomba, esverdeada
                ((-1.0, 1.0, -31.6), (1.5, 0.3, 0.15), 3.0)]  # a vela do santuario
-    m.montar_grade()
+    m.montar_colisao()
     return m
 
 
@@ -158,117 +162,122 @@ def _colisao(m: Mapa) -> None:
                  (gx + 2.9, gz + 0.9, gx + 3.1, gz + 2.6)]
     bx, bz = MARCOS["casa_bomba"]
     m.caixas.append((bx - 1.5, bz - 1.5, bx + 1.5, bz + 1.5))
-    m.circulos += [(MARCOS["tumulo"][0], MARCOS["tumulo"][1], 0.5), (MARCOS["espantalho"][0], MARCOS["espantalho"][1], 0.3)]
+    m.circulos += [(MARCOS["tumulo"][0], MARCOS["tumulo"][1], 0.5, 1.0),  # o monte, baixo
+                   (MARCOS["espantalho"][0], MARCOS["espantalho"][1], 0.3)]
     rx, rz = MARCOS["roda"]
     m.caixas.append((rx - 0.4, rz - 2.0, rx + 0.4, rz + 2.0))
     ax, az = MARCOS["barco"]
-    m.caixas.append((ax - 2.0, az - 0.7, ax + 2.0, az + 0.7))
+    m.caixas.append((ax - 2.0, az - 0.7, ax + 2.0, az + 0.7, 0.75))  # o barco virado, baixo
     sx, sz = SANTUARIO
     m.caixas.append((sx - 1.0, sz - 4.0, sx + 1.0, sz - 2.6))  # o santuario (hokora)
     m.circulos += [(sx - 1.3, sz + 1.5, 0.3), (sx + 1.3, sz + 1.5, 0.3)]  # o torii
-    m.caixas += [(-PONTE_MEIA - 0.15, CANAL_Z - 3.0, -PONTE_MEIA, CANAL_Z + 3.0),  # o corrimao da ponte
-                 (PONTE_MEIA, CANAL_Z - 3.0, PONTE_MEIA + 0.15, CANAL_Z + 3.0)]
+    m.caixas += [(-PONTE_MEIA - 0.15, CANAL_Z - 3.0, -PONTE_MEIA, CANAL_Z + 3.0, 1.15),  # o corrimao da ponte
+                 (PONTE_MEIA, CANAL_Z - 3.0, PONTE_MEIA + 0.15, CANAL_Z + 3.0, 1.15)]
 
 
 # ------------------------------------------------------------------ geometria
 
-def _galpao(x, z) -> list[Tri]:
-    t: list[Tri] = []
-    for x0, z0, x1, z1 in [(-3.1, -2.6, 3.1, -2.4), (-3.1, 2.4, 3.1, 2.6), (-3.1, -2.6, -2.9, 2.6),
-                           (2.9, -2.6, 3.1, -0.9), (2.9, 0.9, 3.1, 2.6)]:
-        t += bloco((x + (x0 + x1) / 2, 0, z + (z0 + z1) / 2), 2.6, x1 - x0, x1 - x0, z1 - z0, MADEIRA_ESCURA)
-    t += bloco((x, 2.6, z), 4.3, 6.8, 0.3, 5.6, (52, 40, 34))  # o telhado
+def _galpao(x, z) -> Malha:
+    partes = [bloco((x + (x0 + x1) / 2, 0, z + (z0 + z1) / 2), 2.6, x1 - x0, x1 - x0, z1 - z0, MADEIRA_ESCURA)
+              for x0, z0, x1, z1 in [(-3.1, -2.6, 3.1, -2.4), (-3.1, 2.4, 3.1, 2.6), (-3.1, -2.6, -2.9, 2.6),
+                                     (2.9, -2.6, 3.1, -0.9), (2.9, 0.9, 3.1, 2.6)]]
+    partes.append(bloco((x, 2.6, z), 4.3, 6.8, 0.3, 5.6, (52, 40, 34)))  # o telhado
     for dx, dz in ((-2.0, 1.4), (-2.0, 0.4), (-1.2, 1.6), (-2.2, -1.5)):  # fardos de feno
-        t += bloco((x + dx, 0, z + dz), 0.6, 0.9, 0.9, 0.6, (150, 128, 70))
-    t += bloco((x - 0.8, 0, z + 0.4), 0.8, 0.7, 0.7, 0.7, MADEIRA)  # o caixote do amuleto
-    t += bloco((x - 1.0, 1.6, z), 1.85, 0.1, 0.07, 0.1, (220, 160, 80), emissivo=True)  # o lampiao
-    return t
+        partes.append(bloco((x + dx, 0, z + dz), 0.6, 0.9, 0.9, 0.6, (150, 128, 70)))
+    partes.append(bloco((x - 0.8, 0, z + 0.4), 0.8, 0.7, 0.7, 0.7, MADEIRA))  # o caixote do amuleto
+    partes.append(bloco((x - 1.0, 1.6, z), 1.85, 0.1, 0.07, 0.1, (220, 160, 80), emissivo=True))  # o lampiao
+    return juntar(*partes)
 
 
-def _ponte() -> list[Tri]:
-    t = bloco((0, 0.05, CANAL_Z), 0.35, 2 * PONTE_MEIA + 0.2, 2 * PONTE_MEIA + 0.2, 2 * CANAL_MEIA + 1.4, MADEIRA)
+def _ponte() -> Malha:
+    partes = [bloco((0, 0.05, CANAL_Z), 0.35, 2 * PONTE_MEIA + 0.2, 2 * PONTE_MEIA + 0.2, 2 * CANAL_MEIA + 1.4, MADEIRA)]
     for sx in (-1, 1):
         x = sx * (PONTE_MEIA + 0.07)
         for dz in (-3.0, -1.0, 1.0, 3.0):
-            t += bloco((x, -0.6, CANAL_Z + dz), 1.2, 0.12, 0.1, 0.12, MADEIRA_ESCURA)
-        t += bloco((x, 1.05, CANAL_Z), 1.15, 0.08, 0.08, 6.2, MADEIRA_ESCURA)
-    return t
+            partes.append(bloco((x, -0.6, CANAL_Z + dz), 1.2, 0.12, 0.1, 0.12, MADEIRA_ESCURA))
+        partes.append(bloco((x, 1.05, CANAL_Z), 1.15, 0.08, 0.08, 6.2, MADEIRA_ESCURA))
+    return juntar(*partes)
 
 
-def _espantalho_grande(x, z) -> list[Tri]:
+def _espantalho_grande(x, z) -> Malha:
     pano = (96, 70, 60)
-    t = bloco((x, 0, z), 3.0, 0.12, 0.1, 0.12, MADEIRA)
-    t += bloco((x, 2.1, z), 2.2, 2.6, 2.6, 0.1, MADEIRA)  # os bracos
-    t += bloco((x, 1.2, z), 2.2, 0.8, 0.9, 0.3, pano)  # o casaco
-    t += icosaedro((x, 2.55, z), 0.25, (176, 160, 120))  # a cabeca de saco
-    t += cone((x, 2.72, z), 0.6, 0.35, (170, 150, 90), lados=8)  # o chapeu de palha
-    return t
+    return juntar(bloco((x, 0, z), 3.0, 0.12, 0.1, 0.12, MADEIRA),
+                  bloco((x, 2.1, z), 2.2, 2.6, 2.6, 0.1, MADEIRA),  # os bracos
+                  bloco((x, 1.2, z), 2.2, 0.8, 0.9, 0.3, pano),  # o casaco
+                  esfera((x, 2.55, z), 0.25, (176, 160, 120), subdivisoes=0),  # a cabeca de saco
+                  cone((x, 2.72, z), 0.6, 0.35, (170, 150, 90), lados=8, tampa=False))  # o chapeu de palha
 
 
-def malha_espantalho() -> list[Tri]:
+def malha_espantalho() -> Malha:
     """Um espantalho comum (centrado na origem, olhando para +z): o rosto de saco tem dois
     furos e uma boca costurada -- e ele se vira para voce."""
-    t = bloco((0, 0, 0), 2.1, 0.08, 0.07, 0.08, MADEIRA)
-    t += bloco((0, 1.5, 0), 1.58, 1.7, 1.7, 0.07, MADEIRA)
-    t += bloco((0, 0.8, 0), 1.6, 0.55, 0.6, 0.22, (74, 66, 58))
-    t += icosaedro((0, 1.85, 0), 0.19, (170, 156, 120))
-    for dx in (-0.07, 0.07):
-        t += bloco((dx, 1.87, 0.17), 1.92, 0.04, 0.04, 0.03, (14, 10, 10))
-    t += bloco((0, 1.76, 0.17), 1.78, 0.12, 0.12, 0.03, (40, 20, 18))
-    return t + cone((0, 2.0, 0), 0.42, 0.25, (150, 132, 80), lados=7)
+    partes = [bloco((0, 0, 0), 2.1, 0.08, 0.07, 0.08, MADEIRA),
+              bloco((0, 1.5, 0), 1.58, 1.7, 1.7, 0.07, MADEIRA),
+              bloco((0, 0.8, 0), 1.6, 0.55, 0.6, 0.22, (74, 66, 58)),
+              esfera((0, 1.85, 0), 0.19, (170, 156, 120), subdivisoes=0)]
+    partes += [bloco((dx, 1.87, 0.17), 1.92, 0.04, 0.04, 0.03, (14, 10, 10)) for dx in (-0.07, 0.07)]
+    partes.append(bloco((0, 1.76, 0.17), 1.78, 0.12, 0.12, 0.03, (40, 20, 18)))
+    partes.append(cone((0, 2.0, 0), 0.42, 0.25, (150, 132, 80), lados=7, tampa=False))
+    return juntar(*partes)
 
 
-def _roda(x, z) -> list[Tri]:
-    t: list[Tri] = []
+def _roda(x, z) -> Malha:
+    partes = []
     cy = 1.4
     for k in range(10):  # as pas, em volta do eixo (que corre em z)
         a = k * 2 * math.pi / 10
         base = (x + 1.5 * math.cos(a), cy + 1.5 * math.sin(a), z)
-        t += bloco(base, base[1] + 0.6, 0.12, 0.12, 1.6, MADEIRA_ESCURA, a - math.pi / 2, base)
-    t += bloco((x, cy - 0.15, z), cy + 0.15, 0.3, 0.3, 2.2, MADEIRA)  # o eixo
-    t += bloco((x, -0.5, z - 1.2), cy + 0.3, 0.25, 0.2, 0.25, MADEIRA)
-    t += bloco((x, -0.5, z + 1.2), cy + 0.3, 0.25, 0.2, 0.25, MADEIRA)
-    return t
+        partes.append(bloco(base, base[1] + 0.6, 0.12, 0.12, 1.6, MADEIRA_ESCURA).girada("z", a - math.pi / 2, base))
+    partes += [bloco((x, cy - 0.15, z), cy + 0.15, 0.3, 0.3, 2.2, MADEIRA),  # o eixo
+               bloco((x, -0.5, z - 1.2), cy + 0.3, 0.25, 0.2, 0.25, MADEIRA),
+               bloco((x, -0.5, z + 1.2), cy + 0.3, 0.25, 0.2, 0.25, MADEIRA)]
+    return juntar(*partes)
 
 
-def _tumulo(x, z) -> list[Tri]:
-    monte = icosaedro((x, 0.0, z), 1.6, (58, 50, 40), sub=1)
-    t = [tuple((p[0], max(0.0, p[1]) * 0.35, p[2]) for p in tri[:3]) + tri[3:] for tri in monte]
-    t += bloco((x, 0, z + 0.2), 1.3, 0.5, 0.42, 0.18, PEDRA)  # a lapide
+def _tumulo(x, z) -> Malha:
+    partes = [achatada(esfera((x, 0.0, z), 1.6, (58, 50, 40), subdivisoes=1), 0.35),  # o monte
+              bloco((x, 0, z + 0.2), 1.3, 0.5, 0.42, 0.18, PEDRA)]  # a lapide
     for k in range(5):
         a = k * 1.25
-        t += bloco((x + 1.8 * math.cos(a), 0, z + 1.8 * math.sin(a)), 0.25, 0.3, 0.2, 0.3, PEDRA)
-    t += bloco((x, 0.3, z + 0.6), 0.45, 0.05, 0.05, 0.05, (240, 220, 160), emissivo=True)  # a vela
-    return t
+        partes.append(bloco((x + 1.8 * math.cos(a), 0, z + 1.8 * math.sin(a)), 0.25, 0.3, 0.2, 0.3, PEDRA))
+    partes.append(bloco((x, 0.3, z + 0.6), 0.45, 0.05, 0.05, 0.05, (240, 220, 160), emissivo=True))  # a vela
+    return juntar(*partes)
 
 
-def _casa_bomba(x, z) -> list[Tri]:
+def _casa_bomba(x, z) -> Malha:
     concreto = (104, 104, 98)
-    t = bloco((x, 0, z), 2.4, 3.0, 3.0, 3.0, concreto)
-    t += bloco((x, 2.4, z), 2.55, 3.4, 3.4, 3.4, (70, 70, 66))
-    t += bloco((x, 0, z + 1.52), 1.9, 0.9, 0.9, 0.04, (24, 24, 26))  # a porta escura
-    t += bloco((x, 2.2, z + 1.6), 2.3, 0.15, 0.15, 0.15, (180, 255, 200), emissivo=True)  # a lampada
-    t += bloco((x + 1.0, 0, z + 1.9), 0.25, 0.8, 0.8, 0.6, concreto)  # o degrau
-    return t
+    return juntar(bloco((x, 0, z), 2.4, 3.0, 3.0, 3.0, concreto),
+                  bloco((x, 2.4, z), 2.55, 3.4, 3.4, 3.4, (70, 70, 66)),
+                  bloco((x, 0, z + 1.52), 1.9, 0.9, 0.9, 0.04, (24, 24, 26)),  # a porta escura
+                  bloco((x, 2.2, z + 1.6), 2.3, 0.15, 0.15, 0.15, (180, 255, 200), emissivo=True),  # a lampada
+                  bloco((x + 1.0, 0, z + 1.9), 0.25, 0.8, 0.8, 0.6, concreto))  # o degrau
 
 
-def _barco(x, z) -> list[Tri]:
-    casco = (60, 46, 38)
-    t = bloco((x, 0, z), 0.75, 1.5, 0.7, 4.0, casco, 0.0)
-    return [tuple((p[2] - z + x, p[1], p[0] - x + z) for p in tri[:3]) + tri[3:] for tri in t]  # de lado na margem
+def _barco(x, z) -> Malha:
+    """De lado na margem: o casco girado 90 graus (era um espelho x<->z, que virava as faces para dentro)."""
+    return bloco((x, 0, z), 0.75, 1.5, 0.7, 4.0, (60, 46, 38)).girada("y", math.pi / 2, (x, 0, z))
 
 
-def _santuario() -> list[Tri]:
+def _santuario() -> Malha:
     sx, sz = SANTUARIO
-    t = torii(sx, sz + 1.5, (100, 30, 26), (64, 20, 18), inclina=math.radians(-2))
-    t += lanterna(sx - 1.6, sz + 0.2, (110, 108, 104), (255, 70, 40))
-    t += bloco((sx, 0, sz - 3.3), 1.4, 1.8, 1.8, 1.3, MADEIRA_ESCURA)  # o hokora
-    t += bloco((sx, 1.4, sz - 3.3), 2.0, 2.4, 0.2, 1.9, (40, 30, 28))
-    t += bloco((sx, 0, sz - 1.8), 0.7, 1.0, 1.0, 0.6, PEDRA)  # o altar
-    return t
+    return juntar(torii(sx, sz + 1.5, (100, 30, 26), (64, 20, 18), inclina=math.radians(-2)),
+                  lanterna(sx - 1.6, sz + 0.2, (110, 108, 104), (255, 70, 40)),
+                  bloco((sx, 0, sz - 3.3), 1.4, 1.8, 1.8, 1.3, MADEIRA_ESCURA),  # o hokora
+                  bloco((sx, 1.4, sz - 3.3), 2.0, 2.4, 0.2, 1.9, (40, 30, 28)),
+                  bloco((sx, 0, sz - 1.8), 0.7, 1.0, 1.0, 0.6, PEDRA))  # o altar
 
 
-def geometria(m: Mapa) -> list[Tri]:
+def _altura(x, z):
+    tipo = agua(x, z)
+    return -0.25 if tipo == 2 else 0.0 if tipo == 1 else 0.18
+
+
+def relevo() -> Relevo:
+    """O chao dos arrozais: dique alto, quadra rasa, canal fundo."""
+    return Relevo.de_funcao(_altura, -TAMANHO - 4, TAMANHO + 4, -TAMANHO - 4, TAMANHO + 4, 0.7)
+
+
+def geometria(m: Mapa) -> Malha:
     rng = random.Random(3)
 
     def cor(x, z):
@@ -282,49 +291,49 @@ def geometria(m: Mapa) -> list[Tri]:
             return (int(48 + tom), int(56 + tom), int(36 + tom))  # capim no dique
         return (int(64 + tom), int(57 + tom), int(45 + tom))
 
-    def altura(x, z):
-        tipo = agua(x, z)
-        return -0.25 if tipo == 2 else 0.0 if tipo == 1 else 0.18
-
-    tris = chao(-TAMANHO - 4, TAMANHO + 4, -TAMANHO - 4, TAMANHO + 4, 0.7, cor, altura)
+    partes = [terreno(relevo(), cor)]
     for x, z, alto, seca in m.arvores:
-        tris += _arvore_seca(x, z, alto * 0.75) if seca else _pinheiro(x, z, alto, (30, 40, 36))
+        partes.append(_arvore_seca(x, z, alto * 0.75) if seca else _pinheiro(x, z, alto, (30, 40, 36)))
     rb = random.Random(5)
     for _ in range(420):  # o arroz que ninguem colheu
         x, z = rb.uniform(-LIMITE, LIMITE), rb.uniform(-LIMITE, LIMITE)
         if agua(x, z) == 1:
-            tris += cone((x, 0, z), 0.13, rb.uniform(0.35, 0.6), (96, 104, 62), lados=4)
+            partes.append(cone((x, 0, z), 0.13, rb.uniform(0.35, 0.6), (96, 104, 62), lados=4, tampa=False))
     for k in range(6):  # postes de luz apagados ao longo do dique principal
         z = 30.0 - k * 11.0
         if abs(z - CANAL_Z) > 4:
-            tris += bloco((1.4, 0, z), 6.0, 0.18, 0.13, 0.18, (50, 44, 40))
-            tris += bloco((1.4, 5.5, z), 5.62, 1.4, 1.4, 0.08, (50, 44, 40))
+            partes.append(bloco((1.4, 0, z), 6.0, 0.18, 0.13, 0.18, (50, 44, 40)))
+            partes.append(bloco((1.4, 5.5, z), 5.62, 1.4, 1.4, 0.08, (50, 44, 40)))
     construtores = {"galpao": _galpao, "espantalho": _espantalho_grande, "roda": _roda, "tumulo": _tumulo,
                     "casa_bomba": _casa_bomba, "barco": _barco}
     for nome, (x, z) in MARCOS.items():
         if nome in construtores:
-            tris += construtores[nome](x, z)
-    tris += _ponte() + _santuario()
-    tris += bloco((INICIO[0] + 1.5, 0, INICIO[1] - 1.0), 1.3, 0.1, 0.1, 0.1, MADEIRA)
-    tris += bloco((INICIO[0] + 1.5, 1.0, INICIO[1] - 1.0), 1.35, 0.8, 0.8, 0.05, MADEIRA)
+            partes.append(construtores[nome](x, z))
+    partes += [_ponte(), _santuario(),
+               bloco((INICIO[0] + 1.5, 0, INICIO[1] - 1.0), 1.3, 0.1, 0.1, 0.1, MADEIRA),
+               bloco((INICIO[0] + 1.5, 1.0, INICIO[1] - 1.0), 1.35, 0.8, 0.8, 0.05, MADEIRA)]
     for x, z, y, _ in m.bilhetes:
         y0 = y if y > 0.1 else 0.2
-        tris += bloco((x, y0, z), y0 + 0.012, 0.22, 0.22, 0.3, (196, 188, 168))
-    return tris
+        partes.append(bloco((x, y0, z), y0 + 0.012, 0.22, 0.22, 0.3, (196, 188, 168)))
+    return juntar(*partes)
 
 
-def malha_cego() -> list[Tri]:
+def malha_cego() -> Malha:
     """O Cego: enorme (mais de 3 m), curvado para a frente, a cabeca enfaixada sem rosto e os
     bracos arrastando na agua. Olha para +z."""
     pele, faixa, escuro = (126, 118, 108), (180, 172, 150), (20, 14, 12)
-    t = bloco((0, 1.4, -0.2), 2.6, 0.9, 1.2, 0.7, pele, 0.0)  # o tronco
-    t = [tuple((p[0], p[1], p[2] + (p[1] - 1.4) * 0.45) for p in tri[:3]) + tri[3:] for tri in t]  # curvado
+
+    def curvar(p):  # o tronco curvado para a frente
+        p[:, 2] += (p[:, 1] - 1.4) * 0.45
+        return p
+
+    partes = [deformada(bloco((0, 1.4, -0.2), 2.6, 0.9, 1.2, 0.7, pele), curvar)]  # o tronco
     for dx in (-0.28, 0.28):
-        t += bloco((dx, 0, -0.1), 1.5, 0.22, 0.26, 0.24, pele)  # pernas
-        t += bloco((dx * 2.2, 0.15, 0.6), 2.5, 0.12, 0.2, 0.14, pele, 0.25 if dx > 0 else -0.25, (dx * 2.2, 2.5, 0.6))
-    cabeca = icosaedro((0, 2.75, 0.75), 0.3, faixa, sub=1)
-    t += [tuple((p[0], p[1], p[2]) for p in tri[:3]) + tri[3:] for tri in cabeca]
-    t += bloco((0, 2.62, 1.0), 2.7, 0.2, 0.24, 0.06, escuro)  # a boca, a unica coisa no rosto
+        partes.append(bloco((dx, 0, -0.1), 1.5, 0.22, 0.26, 0.24, pele))  # pernas
+        partes.append(bloco((dx * 2.2, 0.15, 0.6), 2.5, 0.12, 0.2, 0.14, pele).girada("z", 0.25 if dx > 0 else -0.25,
+                                                                                  (dx * 2.2, 2.5, 0.6)))
+    partes.append(esfera((0, 2.75, 0.75), 0.3, faixa, subdivisoes=1))
+    partes.append(bloco((0, 2.62, 1.0), 2.7, 0.2, 0.24, 0.06, escuro))  # a boca, a unica coisa no rosto
     for k in range(3):  # as voltas da faixa
-        t += bloco((0, 2.7 + k * 0.12, 0.75), 2.74 + k * 0.12, 0.62, 0.62, 0.62, (150, 140, 120))
-    return t
+        partes.append(bloco((0, 2.7 + k * 0.12, 0.75), 2.74 + k * 0.12, 0.62, 0.62, 0.62, (150, 140, 120)))
+    return juntar(*partes)

@@ -154,13 +154,13 @@ def test_o_mapa_e_sempre_o_mesmo_e_as_trilhas_ficam_livres(floresta):
 
 def test_da_para_pegar_todo_amuleto_e_toda_pilha(floresta):
     for x, z in [(a[0], a[1]) for a in floresta.amuletos] + floresta.pilhas:
-        px, pz = regras.colidir(x, z, floresta.circulos_perto(x, z), floresta.caixas, (-40, 40, -40, 40))
+        px, pz = regras.assentar(floresta, x, z)
         assert math.hypot(px - x, pz - z) < regras.PEGAR_ITEM  # a colisao deixa chegar perto o bastante
 
 
 def test_pegar_amuleto_e_pilha(floresta):
     a = floresta.amuletos[0]
-    x, z = regras.colidir(a[0], a[1], floresta.circulos_perto(a[0], a[1]), floresta.caixas, (-40, 40, -40, 40))
+    x, z = regras.assentar(floresta, a[0], a[1])
     e = _no_mapa(floresta, x=x, z=z, pilha=0.2, vulto=(a[0] + 20, a[1]))
     regras.atualizar(e, 1 / 60, 0, 0, 0, False)
     assert e.coletados == 1 and "amuleto" in e.eventos
@@ -211,8 +211,41 @@ def test_longe_demais_ele_reaparece_atras(floresta):
 
 
 def test_caixa_nao_deixa_atravessar_parede():
-    x, z = regras.colidir(0.0, 0.05, (), [(-1.0, -0.1, 1.0, 0.1)], (-9, 9, -9, 9))
-    assert abs(z) >= 0.1 + regras.RAIO_JOGADOR - 1e-9
+    m = mapa_mod.Mapa(caixas=[(-1.0, -0.1, 1.0, 0.1)])
+    m.montar_colisao()
+    x, z = regras.mover(m.mundo, 0.0, 1.0, 0.0, -2.0, (), (-9, 9, -9, 9))  # anda 2 m reto contra a parede fina
+    assert z >= 0.1 + regras.RAIO_JOGADOR - 1e-6  # parou do lado de ca, sem atravessar
+    assert regras.assentar(m, 0.0, 0.05)[1] ** 2 >= (0.1 + regras.RAIO_JOGADOR - 1e-6) ** 2
+
+
+def test_troncos_e_paredes_tapam_a_visao_e_o_que_e_baixo_nao():
+    m = mapa_mod.Mapa(circulos=[(0.0, 0.0, 0.35), (10.0, 0.0, 0.4, 0.5)], caixas=[(-1.0, 5.0, 1.0, 5.2)])
+    m.montar_colisao()
+    assert not regras.ve(m, (0.0, 1.5, -5.0), (0.0, 1.5, 3.0))  # o tronco no meio
+    assert not regras.ve(m, (0.0, 1.5, 3.0), (0.0, 1.5, 8.0))  # a parede no meio
+    assert regras.ve(m, (10.0, 1.5, -5.0), (10.0, 1.5, 5.0))  # a pedra baixa nao tapa
+    assert regras.ve(m, (3.0, 1.5, -5.0), (3.0, 1.5, 5.0))  # caminho livre
+    assert regras.ve(m, (0.0, 1.5, -5.0), (0.0, 1.0, -0.2))  # a propria coisa olhada nao se esconde
+
+
+def test_o_vulto_nao_ve_a_luz_atras_do_tronco():
+    m = mapa_mod.Mapa(circulos=[(0.0, 0.0, 0.35)], inicio=(0.0, 5.0))
+    m.montar_colisao()
+    e = _no_mapa(m, x=0.0, z=5.0, fase="caca", vulto=(0.0, -6.0))
+    e.giro = math.pi / 2  # olhando para o lado: ele nao esta no feixe
+    _passos(e, 2)
+    assert e.pista is None  # a lanterna acesa, mas o tronco entre voces
+    e.vulto = (3.0, -6.0)
+    _passos(e, 2)
+    assert e.pista == (e.x, e.z)  # saiu de tras do tronco: viu
+
+
+def test_o_que_o_tronco_esconde_nao_esta_na_vista():
+    m = mapa_mod.Mapa(circulos=[(0.0, 0.0, 0.35)])
+    m.montar_colisao()
+    e = _no_mapa(m, x=0.0, z=5.0, giro=0.0)  # olhando para -z
+    assert not e.na_vista(0.0, -6.0)  # atras do tronco
+    assert e.na_vista(2.5, -6.0)
 
 
 # ---------------------------------------------------------------- v0.2: o vulto que ouve, a floresta que mente
@@ -552,7 +585,7 @@ def test_os_arrozais_tem_agua_diques_e_tudo_alcancavel(arrozais):
     assert arrozal.agua(-10.0, arrozal.CANAL_Z) == 2  # o canal: fundo
     assert arrozal.agua(0.0, arrozal.CANAL_Z) == 0  # a ponte
     for x, z in [(a[0], a[1]) for a in arrozais.amuletos] + arrozais.pilhas:
-        px, pz = regras.colidir(x, z, arrozais.circulos_perto(x, z), arrozais.caixas, (-40, 40, -40, 40))
+        px, pz = regras.assentar(arrozais, x, z)
         assert math.hypot(px - x, pz - z) < regras.PEGAR_ITEM
 
 
@@ -636,7 +669,7 @@ def test_a_aldeia_tem_tudo_alcancavel_e_bonecas(aldeia_mapa):
     assert m.bioma == "aldeia" and m.tem_imitadora and not m.tem_vulto and m.estatua == "boneca"
     assert len(m.amuletos) == 7 and len(m.espantalhos) == 10
     for x, z in [(a[0], a[1]) for a in m.amuletos] + m.pilhas:
-        px, pz = regras.colidir(x, z, m.circulos_perto(x, z), m.caixas, (-40, 40, -40, 40))
+        px, pz = regras.assentar(m, x, z)
         assert math.hypot(px - x, pz - z) < regras.PEGAR_ITEM
 
 
@@ -715,7 +748,7 @@ def test_o_bambuzal_tem_tudo_alcancavel_e_tocos_fora_da_trilha(bambuzal_mapa):
     assert m.bioma == "bambuzal" and m.tem_farejador and not m.tem_vulto and len(m.tocos) > 100
     assert all(bambuzal.dist_trilha(x, z) > 1.4 for x, z in m.tocos)  # a trilha e limpa
     for x, z in [(a[0], a[1]) for a in m.amuletos] + m.pilhas:
-        px, pz = regras.colidir(x, z, m.circulos_perto(x, z), m.caixas, (-40, 40, -40, 40))
+        px, pz = regras.assentar(m, x, z)
         assert math.hypot(px - x, pz - z) < regras.PEGAR_ITEM
 
 
@@ -795,7 +828,7 @@ def test_o_cemiterio_tem_tudo_alcancavel_e_nenhum_esconderijo(cemiterio_mapa):
     assert m.bioma == "cemiterio" and m.tem_fantoche and not m.tem_vulto and not m.esconderijos
     assert len(m.pedras) > 150 and all(cemiterio.dist_trilha(x, z) > 1.7 for x, z, _ in m.pedras)
     for x, z in [(a[0], a[1]) for a in m.amuletos] + m.pilhas:
-        px, pz = regras.colidir(x, z, m.circulos_perto(x, z), m.caixas, (-40, 40, -40, 40))
+        px, pz = regras.assentar(m, x, z)
         assert math.hypot(px - x, pz - z) < regras.PEGAR_ITEM
 
 
@@ -887,8 +920,7 @@ def test_a_escola_tem_tudo_alcancavel_pelas_portas(escola_mapa):
     passo, lim = 0.5, m.limite - 0.5
 
     def livre(x, z):
-        px, pz = regras.colidir(x, z, m.circulos_perto(x, z), m.caixas, (-lim, lim, -lim, lim))
-        return math.hypot(px - x, pz - z) < 1e-6
+        return abs(x) <= lim and abs(z) <= lim and regras.livre(m, x, z)
 
     def celula(x, z):
         return round(x / passo), round(z / passo)
@@ -1031,7 +1063,7 @@ def test_o_rio_nao_tem_monstro_e_ela_esta_escondida(rio_mapa):
     m = rio_mapa
     assert m.bioma == "rio" and m.tem_esconde and not m.tem_vulto and not m.amuletos
     for x, z in m.esconde_lugares:  # da para chegar perto de cada esconderijo
-        px, pz = regras.colidir(x, z, m.circulos_perto(x, z), m.caixas, (-40, 40, -40, 40))
+        px, pz = regras.assentar(m, x, z)
         assert math.hypot(px - x, pz - z) < regras.ACHAR and m.chao(x, z) == 0
     e = regras.Estado(mapa=m)
     _passos(e, 2)

@@ -16,7 +16,10 @@ from __future__ import annotations
 import math
 import random
 
-from terror_ps1.malhas import Tri, bloco, chao, icosaedro, lanterna, torii
+import numpy as np
+from ouroboros.interfaces.malhas3d import Malha, bloco, esfera, juntar, plano
+
+from terror_ps1.malhas import lanterna, torii
 from terror_ps1.mapa import MADEIRA, MADEIRA_ESCURA, PEDRA, Mapa, P, _pinheiro, dist_segmento
 
 TAMANHO = 40.0
@@ -90,8 +93,9 @@ def gerar_mapa(semente: int = 23) -> Mapa:
         while x < LIMITE - 1.0:
             px, pz = x + rng.uniform(-0.2, 0.2), z + rng.uniform(-0.2, 0.2)
             if _livre(px, pz) and rng.random() < 0.78:
-                m.pedras.append((px, pz, rng.uniform(0.9, 1.6)))  # x, z, altura do tumulo
-                m.circulos.append((px, pz, 0.42))
+                alto = rng.uniform(0.9, 1.6)
+                m.pedras.append((px, pz, alto))  # x, z, altura do tumulo
+                m.circulos.append((px, pz, 0.42, 0.25 + alto * 0.7))  # o pilar: quase sempre abaixo dos olhos
             x += ex
         z += ez
     for _ in range(2600):  # os cedros em volta (uma parede alem do limite) e alguns entre os tumulos
@@ -123,7 +127,7 @@ def gerar_mapa(semente: int = 23) -> Mapa:
                ((19.0, 0.5, -13.6), (1.0, 0.8, 0.45), 2.6),  # o incenso no tumulo dos Mori
                ((-11.0, 1.2, -21.0), (0.6, 0.7, 1.0), 3.0),  # a lanterna do ossuario
                ((-1.0, 1.0, -31.6), (1.5, 0.3, 0.15), 3.0)]  # o santuario
-    m.montar_grade()
+    m.montar_colisao()
     return m
 
 
@@ -137,7 +141,7 @@ def _colisao(m: Mapa) -> None:
     sx, sz = MARCOS["salgueiro"]
     m.circulos.append((sx, sz, 0.6))
     px, pz = MARCOS["poco"]
-    m.circulos.append((px, pz, 0.9))
+    m.circulos.append((px, pz, 0.9, 0.8))  # o poco (baixo: nao tapa a visao)
     mx, mz = MARCOS["mori"]
     m.circulos.append((mx, mz, 0.8))
     ox, oz = MARCOS["ossuario"]
@@ -152,79 +156,79 @@ def _colisao(m: Mapa) -> None:
 PEDRA_TUMULO, LIMO = (104, 104, 100), (70, 80, 62)
 
 
-def _tumulo(x, z, alto, rng) -> list[Tri]:
+def _tumulo(x, z, alto, rng) -> Malha:
     """Um tumulo japones: base larga, o pilar com o nome e, atras, tabuas de madeira finas."""
     cor = PEDRA_TUMULO if rng.random() < 0.7 else LIMO
-    t = bloco((x, 0, z), 0.25, 0.8, 0.8, 0.6, (88, 88, 84))
-    t += bloco((x, 0.25, z), 0.25 + alto * 0.7, 0.36, 0.34, 0.3, cor)
+    partes = [bloco((x, 0, z), 0.25, 0.8, 0.8, 0.6, (88, 88, 84)), bloco((x, 0.25, z), 0.25 + alto * 0.7, 0.36, 0.34, 0.3, cor)]
     for k in range(rng.randrange(0, 4)):  # as sotoba
-        t += bloco((x - 0.2 + k * 0.13, 0, z + 0.4), alto + 0.7, 0.08, 0.07, 0.03, (120, 104, 80),
-                   rng.uniform(-0.12, 0.12), (x, 0, z + 0.4))
-    return t
+        partes.append(bloco((x - 0.2 + k * 0.13, 0, z + 0.4), alto + 0.7, 0.08, 0.07, 0.03, (120, 104, 80))
+                      .girada("z", rng.uniform(-0.12, 0.12), (x, 0, z + 0.4)))
+    return juntar(*partes)
 
 
-def _portao(x, z) -> list[Tri]:
-    t = bloco((x - 1.6, 0, z), 3.2, 0.5, 0.45, 0.5, PEDRA) + bloco((x + 1.6, 0, z), 3.2, 0.5, 0.45, 0.5, PEDRA)
-    return t + bloco((x, 3.2, z), 3.5, 4.2, 4.0, 0.6, (80, 78, 74), 0.08, (x, 3.2, z))  # a viga, torta
+def _portao(x, z) -> Malha:
+    return juntar(bloco((x - 1.6, 0, z), 3.2, 0.5, 0.45, 0.5, PEDRA), bloco((x + 1.6, 0, z), 3.2, 0.5, 0.45, 0.5, PEDRA),
+                  bloco((x, 3.2, z), 3.5, 4.2, 4.0, 0.6, (80, 78, 74)).girada("z", 0.08, (x, 3.2, z)))  # a viga, torta
 
 
-def _crematorio(x, z) -> list[Tri]:
-    t = bloco((x - 0.75, 0, z), 2.6, 3.5, 3.5, 4.0, (96, 70, 60))
-    t += bloco((x - 0.75, 2.6, z), 3.0, 3.9, 3.9, 4.4, (60, 52, 50))
-    t += bloco((x - 1.6, 3.0, z - 1.0), 5.5, 0.7, 0.6, 0.7, (88, 66, 58))  # a chamine
-    t += bloco((x + 1.02, 0, z), 1.3, 0.05, 0.05, 1.2, (14, 10, 10))  # a boca do forno
-    return t + icosaedro((x + 0.9, 0.25, z), 0.2, (220, 80, 20), emissivo=True)
+def _crematorio(x, z) -> Malha:
+    return juntar(bloco((x - 0.75, 0, z), 2.6, 3.5, 3.5, 4.0, (96, 70, 60)),
+                  bloco((x - 0.75, 2.6, z), 3.0, 3.9, 3.9, 4.4, (60, 52, 50)),
+                  bloco((x - 1.6, 3.0, z - 1.0), 5.5, 0.7, 0.6, 0.7, (88, 66, 58)),  # a chamine
+                  bloco((x + 1.02, 0, z), 1.3, 0.05, 0.05, 1.2, (14, 10, 10)),  # a boca do forno
+                  esfera((x + 0.9, 0.25, z), 0.2, (220, 80, 20), subdivisoes=0, emissivo=True))
 
 
-def _zelador(x, z) -> list[Tri]:
-    t = bloco((x + 0.25, 0, z + 1.25), 2.6, 4.5, 4.5, 3.5, MADEIRA)
-    t += bloco((x + 0.25, 2.6, z + 1.25), 3.6, 5.2, 0.3, 4.2, (54, 46, 40))
-    t += bloco((x - 2.02, 1.2, z + 1.8), 1.9, 0.05, 0.05, 0.8, (230, 170, 90), emissivo=True)  # a janela
-    return t + bloco((x - 2.02, 0, z + 0.4), 2.0, 0.05, 0.05, 0.9, MADEIRA_ESCURA)  # a porta
+def _zelador(x, z) -> Malha:
+    return juntar(bloco((x + 0.25, 0, z + 1.25), 2.6, 4.5, 4.5, 3.5, MADEIRA),
+                  bloco((x + 0.25, 2.6, z + 1.25), 3.6, 5.2, 0.3, 4.2, (54, 46, 40)),
+                  bloco((x - 2.02, 1.2, z + 1.8), 1.9, 0.05, 0.05, 0.8, (230, 170, 90), emissivo=True),  # a janela
+                  bloco((x - 2.02, 0, z + 0.4), 2.0, 0.05, 0.05, 0.9, MADEIRA_ESCURA))  # a porta
 
 
-def _salgueiro(x, z, rng) -> list[Tri]:
-    t = bloco((x, 0, z), 3.6, 0.45, 0.3, 0.45, (58, 50, 42), 0.1, (x, 0, z))
+def _salgueiro(x, z, rng) -> Malha:
+    partes = [bloco((x, 0, z), 3.6, 0.45, 0.3, 0.45, (58, 50, 42)).girada("z", 0.1, (x, 0, z))]
     for k in range(26):  # os galhos caindo ate quase o chao
         a = k / 26 * 2 * math.pi
         r = rng.uniform(0.8, 2.4)
         gx, gz = x + math.cos(a) * r, z + math.sin(a) * r
-        t += bloco((gx, rng.uniform(0.3, 1.2), gz), 3.8, 0.05, 0.05, 0.05, (60, 78, 52))
-    return t
+        partes.append(bloco((gx, rng.uniform(0.3, 1.2), gz), 3.8, 0.05, 0.05, 0.05, (60, 78, 52)))
+    return juntar(*partes)
 
 
-def _poco(x, z) -> list[Tri]:
-    t = bloco((x, 0, z), 0.8, 1.6, 1.6, 1.6, PEDRA)
-    t += bloco((x, 0.79, z), 0.8, 1.2, 1.2, 1.2, (8, 8, 10))  # a agua preta la embaixo
-    t += bloco((x - 0.7, 0.8, z), 2.2, 0.1, 0.1, 0.1, MADEIRA_ESCURA) + bloco((x + 0.7, 0.8, z), 2.2, 0.1, 0.1, 0.1,
-                                                                             MADEIRA_ESCURA)
-    return t + bloco((x, 2.2, z), 2.3, 1.6, 1.6, 0.2, MADEIRA)
+def _poco(x, z) -> Malha:
+    return juntar(bloco((x, 0, z), 0.8, 1.6, 1.6, 1.6, PEDRA),
+                  bloco((x, 0.79, z), 0.8, 1.2, 1.2, 1.2, (8, 8, 10)),  # a agua preta la embaixo
+                  bloco((x - 0.7, 0.8, z), 2.2, 0.1, 0.1, 0.1, MADEIRA_ESCURA),
+                  bloco((x + 0.7, 0.8, z), 2.2, 0.1, 0.1, 0.1, MADEIRA_ESCURA),
+                  bloco((x, 2.2, z), 2.3, 1.6, 1.6, 0.2, MADEIRA))
 
 
-def _mori(x, z) -> list[Tri]:
-    t = bloco((x, 0, z), 0.4, 1.8, 1.8, 1.4, (90, 90, 86))
-    t += bloco((x, 0.4, z), 2.2, 0.6, 0.55, 0.45, (70, 70, 70))  # o pilar escuro da familia
+def _mori(x, z) -> Malha:
+    partes = [bloco((x, 0, z), 0.4, 1.8, 1.8, 1.4, (90, 90, 86)),
+              bloco((x, 0.4, z), 2.2, 0.6, 0.55, 0.45, (70, 70, 70))]  # o pilar escuro da familia
     for k in range(5):  # os cinco nomes (riscos claros); o quinto, mais curto
-        t += bloco((x - 0.2 + k * 0.1, 0.8, z - 0.24), 2.0 - (0.6 if k == 4 else 0.0), 0.02, 0.02, 0.01,
-                   (180, 176, 160))
-    return t + bloco((x - 0.5, 0.4, z - 0.6), 0.55, 0.05, 0.05, 0.05, (240, 200, 140), emissivo=True)  # o incenso
+        partes.append(bloco((x - 0.2 + k * 0.1, 0.8, z - 0.24), 2.0 - (0.6 if k == 4 else 0.0), 0.02, 0.02, 0.01,
+                            (180, 176, 160)))
+    partes.append(bloco((x - 0.5, 0.4, z - 0.6), 0.55, 0.05, 0.05, 0.05, (240, 200, 140), emissivo=True))  # o incenso
+    return juntar(*partes)
 
 
-def _ossuario(x, z) -> list[Tri]:
-    t = bloco((x, 0, z - 1.5), 2.2, 3.0, 2.6, 2.0, PEDRA)
-    t += bloco((x, 0, z - 0.48), 1.5, 1.0, 1.0, 0.05, (12, 10, 10))  # a porta aberta
-    return t + lanterna(x + 2.0, z - 0.5, (110, 108, 104), (150, 170, 255))
+def _ossuario(x, z) -> Malha:
+    return juntar(bloco((x, 0, z - 1.5), 2.2, 3.0, 2.6, 2.0, PEDRA),
+                  bloco((x, 0, z - 0.48), 1.5, 1.0, 1.0, 0.05, (12, 10, 10)),  # a porta aberta
+                  lanterna(x + 2.0, z - 0.5, (110, 108, 104), (150, 170, 255)))
 
 
-def _santuario() -> list[Tri]:
+def _santuario() -> Malha:
     sx, sz = SANTUARIO
-    t = torii(sx, sz + 1.5, (100, 30, 26), (64, 20, 18))
-    t += lanterna(sx - 1.6, sz + 0.2, (110, 108, 104), (255, 70, 40))
-    t += bloco((sx, 0, sz - 3.3), 1.4, 1.8, 1.8, 1.3, MADEIRA_ESCURA)
-    return t + bloco((sx, 1.4, sz - 3.3), 2.0, 2.4, 0.2, 1.9, (40, 30, 28))
+    return juntar(torii(sx, sz + 1.5, (100, 30, 26), (64, 20, 18)),
+                  lanterna(sx - 1.6, sz + 0.2, (110, 108, 104), (255, 70, 40)),
+                  bloco((sx, 0, sz - 3.3), 1.4, 1.8, 1.8, 1.3, MADEIRA_ESCURA),
+                  bloco((sx, 1.4, sz - 3.3), 2.0, 2.4, 0.2, 1.9, (40, 30, 28)))
 
 
-def geometria(m: Mapa) -> list[Tri]:
+def geometria(m: Mapa) -> Malha:
     rng = random.Random(4)
 
     def cor(x, z):
@@ -233,22 +237,18 @@ def geometria(m: Mapa) -> list[Tri]:
             return (int(78 + tom), int(76 + tom), int(70 + tom))  # o cascalho da trilha
         return (int(40 + tom), int(46 + tom), int(36 + tom))
 
-    tris = chao(-TAMANHO - 4, TAMANHO + 4, -TAMANHO - 4, TAMANHO + 4, 0.8, cor)
-    for x, z, alto, _ in m.arvores:
-        tris += _pinheiro(x, z, alto, (26, 38, 32))
+    partes = [plano(-TAMANHO - 4, TAMANHO + 4, -TAMANHO - 4, TAMANHO + 4, cor, passo=0.8)]
+    partes += [_pinheiro(x, z, alto, (26, 38, 32)) for x, z, alto, _ in m.arvores]
     rt = random.Random(8)
-    for x, z, alto in m.pedras:
-        tris += _tumulo(x, z, alto, rt)
+    partes += [_tumulo(x, z, alto, rt) for x, z, alto in m.pedras]
     for nome, f in (("portao", _portao), ("crematorio", _crematorio), ("zelador", _zelador), ("poco", _poco),
                     ("mori", _mori), ("ossuario", _ossuario)):
-        tris += f(*MARCOS[nome])
-    tris += _salgueiro(*MARCOS["salgueiro"], random.Random(2))
-    tris += _santuario()
-    tris += bloco((INICIO[0] + 1.5, 0, INICIO[1] - 1.0), 1.3, 0.1, 0.1, 0.1, MADEIRA)
-    tris += bloco((INICIO[0] + 1.5, 1.0, INICIO[1] - 1.0), 1.35, 0.8, 0.8, 0.05, MADEIRA)
-    for x, z, _, _ in m.bilhetes:
-        tris += bloco((x, 0.02, z), 0.032, 0.22, 0.22, 0.3, (196, 188, 168))
-    return tris
+        partes.append(f(*MARCOS[nome]))
+    partes += [_salgueiro(*MARCOS["salgueiro"], random.Random(2)), _santuario(),
+               bloco((INICIO[0] + 1.5, 0, INICIO[1] - 1.0), 1.3, 0.1, 0.1, 0.1, MADEIRA),
+               bloco((INICIO[0] + 1.5, 1.0, INICIO[1] - 1.0), 1.35, 0.8, 0.8, 0.05, MADEIRA)]
+    partes += [bloco((x, 0.02, z), 0.032, 0.22, 0.22, 0.3, (196, 188, 168)) for x, z, _, _ in m.bilhetes]
+    return juntar(*partes)
 
 
 # ------------------------------------------------------------------ o Fantoche
@@ -256,33 +256,33 @@ def geometria(m: Mapa) -> list[Tri]:
 LUTO, PELE, COISA = (18, 16, 20), (190, 176, 164), (214, 206, 190)
 
 
-def malha_fantoche() -> list[Tri]:
+def malha_fantoche() -> Malha:
     """O Fantoche de pe: uma mulher de quimono preto de luto, a cabeca caida de lado num angulo
     errado, os bracos soltos. Agarrada nas costas, a coisa: palida, encolhida, os dedos compridos
     passando por cima dos ombros dela. Olha para +z (as costas, e a coisa, ficam em -z)."""
-    t = bloco((0, 0, 0), 1.25, 0.5, 0.36, 0.34, LUTO)  # o quimono
-    t += bloco((0, 1.25, 0), 1.5, 0.36, 0.32, 0.26, LUTO)
+    partes = [bloco((0, 0, 0), 1.25, 0.5, 0.36, 0.34, LUTO),  # o quimono
+              bloco((0, 1.25, 0), 1.5, 0.36, 0.32, 0.26, LUTO)]
     for dx in (-0.22, 0.22):  # os bracos, mortos
-        t += bloco((dx, 0.55, 0.02), 1.42, 0.07, 0.08, 0.08, LUTO)
-        t += bloco((dx, 0.42, 0.02), 0.56, 0.05, 0.05, 0.05, PELE)  # as maos
-    t += bloco((0, 1.48, 0), 1.6, 0.08, 0.07, 0.08, PELE, 0.5, (0, 1.5, 0))  # o pescoco torto
-    t += icosaedro((0.17, 1.62, 0.03), 0.13, PELE)  # a cabeca, caida no ombro
-    t += bloco((0.17, 1.52, -0.06), 1.8, 0.28, 0.24, 0.2, (10, 8, 8), 0.5, (0.17, 1.6, 0))  # o cabelo
-    t += icosaedro((0, 1.15, -0.3), 0.24, COISA)  # a coisa, encolhida nas costas
-    t += icosaedro((0, 1.42, -0.28), 0.13, COISA)  # a cabeca dela, por cima do ombro
-    for dx in (-0.05, 0.05):
-        t += bloco((dx, 1.44, -0.16), 1.47, 0.025, 0.025, 0.02, (255, 236, 200), emissivo=True)  # os olhos
+        partes.append(bloco((dx, 0.55, 0.02), 1.42, 0.07, 0.08, 0.08, LUTO))
+        partes.append(bloco((dx, 0.42, 0.02), 0.56, 0.05, 0.05, 0.05, PELE))  # as maos
+    partes += [bloco((0, 1.48, 0), 1.6, 0.08, 0.07, 0.08, PELE).girada("z", 0.5, (0, 1.5, 0)),  # o pescoco torto
+               esfera((0.17, 1.62, 0.03), 0.13, PELE, subdivisoes=0),  # a cabeca, caida no ombro
+               bloco((0.17, 1.52, -0.06), 1.8, 0.28, 0.24, 0.2, (10, 8, 8)).girada("z", 0.5, (0.17, 1.6, 0)),  # o cabelo
+               esfera((0, 1.15, -0.3), 0.24, COISA, subdivisoes=0),  # a coisa, encolhida nas costas
+               esfera((0, 1.42, -0.28), 0.13, COISA, subdivisoes=0)]  # a cabeca dela, por cima do ombro
+    partes += [bloco((dx, 1.44, -0.16), 1.47, 0.025, 0.025, 0.02, (255, 236, 200), emissivo=True)  # os olhos
+               for dx in (-0.05, 0.05)]
     for dx in (-0.2, 0.2):  # os dedos compridos por cima dos ombros
-        t += bloco((dx, 1.45, -0.2), 1.5, 0.03, 0.03, 0.36, COISA)
-        t += bloco((dx, 1.2, 0.0), 1.5, 0.03, 0.03, 0.03, COISA)
-    for dx in (-0.16, 0.16):  # as pernas dela, em volta da cintura
-        t += bloco((dx, 0.8, -0.26), 0.9, 0.06, 0.06, 0.3, COISA)
-    return t
+        partes.append(bloco((dx, 1.45, -0.2), 1.5, 0.03, 0.03, 0.36, COISA))
+        partes.append(bloco((dx, 1.2, 0.0), 1.5, 0.03, 0.03, 0.03, COISA))
+    partes += [bloco((dx, 0.8, -0.26), 0.9, 0.06, 0.06, 0.3, COISA) for dx in (-0.16, 0.16)]  # as pernas dela, na cintura
+    return juntar(*partes)
 
 
-def malha_fantoche_caida() -> list[Tri]:
+# caida de cara: (x, y, z) -> (x, 0.05 - 0.9 z, 0.95 y + 0.1)
+_DEITAR = np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 0.0, -0.9, 0.05], [0.0, 0.95, 0.0, 0.1], [0.0, 0.0, 0.0, 1.0]])
+
+
+def malha_fantoche_caida() -> Malha:
     """Caida de cara no chao (tombada para a frente, +z). A coisa continua nas costas, quieta."""
-    def deitar(p):
-        x, y, z = p
-        return (x, 0.05 - z * 0.9, y * 0.95 + 0.1)
-    return [tuple(deitar(p) for p in tri[:3]) + tri[3:] for tri in malha_fantoche()]
+    return malha_fantoche().transformada(_DEITAR)

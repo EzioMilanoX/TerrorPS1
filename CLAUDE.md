@@ -11,8 +11,25 @@ do M21) e saiu para repo próprio na v0.1.0 (2026-11-11).
 - OuroborosEngine como repo irmão (`-e ../OuroborosEngine`), renderer `"gl"` (ModernGL,
   `IRenderer3D`). Mudança de comportamento compartilhado (render 3D, entrada, som) começa
   na engine, não aqui.
-- `malhas.py` é cópia dos construtores da vitrine (`games/vitrine_estilos/tres_d.py`). Se
-  os construtores de malha forem para a engine (próximo passo do M21 no ROADMAP), troque.
+- **Depende da engine com `ouroboros.core.colisao3d` e `ouroboros.interfaces.malhas3d`**
+  (engine 0.4.0 ou mais nova). Sem eles o jogo não importa.
+- Malhas: os construtores vêm da engine (`malhas3d`: `bloco`, `cone`, `esfera`, `plano`,
+  `terreno`, `Malha` com `girada`/`transformada`/`juntar`). `malhas.py` guarda só os modelos
+  compostos (torii, lanterna, pinheiro, vulto) e `deformada`/`movida`/`escalada`. Para o visual
+  não mudar: `cone(..., tampa=False)` sempre e `esfera(..., subdivisoes=0)` = o icosaedro antigo.
+  `geometria()` de cada bioma devolve uma `Malha`; monte numa lista e `juntar(*partes)` no fim
+  (somar malha a malha copia tudo de novo). Floresta e arrozal usam `terreno(Relevo)`.
+- Colisão e visão: `Mapa.montar_colisao()` monta um `MundoColisao3D` (`Mapa.mundo`) com os
+  `circulos` (x, z, raio[, altura]) como capsulas em pé e as `caixas` (x0, z0, x1, z1[, altura])
+  como AABB. Sem altura = `mapa.ALTO` (tapa a visão); mais baixo que `VISAO_MIN` (pedra, mesa,
+  poço, túmulo, carteira) segura o corpo mas não tapa a visão (camadas `CORPO`/`VISAO`).
+  Coisa nova sólida e baixa: passe a altura. O que se mexe (arvore que anda, jizos a mais, o
+  Cego) não entra no mundo: vai como `extras` em `regras.mover`.
+- `regras.mover` (anda deslizando, `mover_capsula`), `regras.assentar` (onde o corpo fica),
+  `regras.livre` (cabe aqui?), `regras.ve` (`tem_visao`, para `FOLGA_VISAO` antes do alvo para
+  o colisor da própria estátua não escondê-la) e `regras.vulto_te_ve`. `Estado.na_vista` e a
+  luz que o vulto vê de longe (`_saber`, e o "viu você entrar" do esconderijo) usam a visão:
+  troncos e paredes tapam.
 - Rodar: `python -m terror_ps1`. Testes: `pytest`. Lint: `ruff check .`.
 - Executável: `python -m PyInstaller terror_ps1.spec` (onedir; o onefile é barrado pelo
   Controle Inteligente de Aplicativos).

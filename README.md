@@ -103,8 +103,8 @@ terror_ps1/
   rio.py         ?
   verdades.py    o que cada morte conta (cinco verdades por monstro)
   menu.py        o menu (campanha) e progresso.py (o save)
-  mapa.py        o Mapa de cada noite e a floresta 80x80 (marcos, trilhas, colisão)
-  malhas.py      construtores low poly (bloco, cone, torii...) e o vulto
+  mapa.py        o Mapa de cada noite e a floresta 80x80 (marcos, trilhas; colisão e visão no MundoColisao3D da engine)
+  malhas.py      os modelos do jogo (torii, lanterna, pinheiro, o vulto) com os construtores de malha da engine
   cena.py        a cena: render 3D (IRenderer3D da engine), HUD e som
   sons.py        os sons, sintetizados na primeira vez
   data/          config, controles e ícone

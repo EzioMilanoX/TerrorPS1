@@ -8,7 +8,8 @@ dependencies = [
     "pygame-ce>=2.5",
     "numpy>=1.26",
     "moderngl>=5.10",
-    # a engine ECS compartilhada (repo irmao; em dev: pip install -e ../OuroborosEngine)
+    # a engine ECS compartilhada (repo irmao; em dev: pip install -e ../OuroborosEngine). Precisa da
+    # engine com `ouroboros.core.colisao3d` e `ouroboros.interfaces.malhas3d` (engine 0.4.0 ou mais nova)
     "ouroboros-engine @ git+https://github.com/EzioMilanoX/OuroborosEngine.git",
 ]
 
@@ -25,7 +26,6 @@ ignore = ["B905"]
 
 [tool.ruff.lint.per-file-ignores]
 "*.spec" = ["F821"]  # SPECPATH, Analysis, EXE... sao injetados pelo PyInstaller
-"terror_ps1/malhas.py" = ["B023"]  # a funcao interna do icosaedro roda dentro do proprio laco
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

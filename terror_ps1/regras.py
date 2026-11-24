@@ -32,10 +32,17 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from ouroboros.core.colisao3d import Capsula, MundoColisao3D, ResultadoMovimento
+
+from terror_ps1.mapa import CORPO, VISAO
+
 if TYPE_CHECKING:
     from terror_ps1.mapa import Mapa
 
 ALTURA_OLHOS = 1.55
+ALTURA_CORPO = 1.7  # a capsula do jogador no MundoColisao3D (o raio e RAIO_JOGADOR)
+OLHOS_VULTO = 2.4  # de onde ele olha (a cabeca dele e alta)
+FOLGA_VISAO = 0.7  # o raio de visao para antes do alvo: o proprio corpo da coisa nao a esconde
 ABAIXADO = 0.6  # quanto os olhos descem agachado
 VELOCIDADE = 2.2  # unidades por segundo
 VEL_CORRER = 3.7
@@ -431,8 +438,9 @@ class Estado:
         cos = sum(a * b for a, b in zip(d, self.feixe, strict=True)) / dist
         return cos > math.cos(CONE_VULTO)
 
-    def na_vista(self, x: float, z: float) -> bool:
-        """(x, z) pode estar na tela? Fora disso a floresta muda sem ninguem ver."""
+    def na_vista(self, x: float, z: float, y: float = 1.0) -> bool:
+        """(x, z) pode estar na tela? Fora disso a floresta muda sem ninguem ver. Tronco ou
+        parede no meio do caminho (`tem_visao` no MundoColisao3D do mapa) tambem esconde."""
         dx, dz = x - self.x, z - self.z
         d = math.hypot(dx, dz)
         if d > VISAO_LONGE:
@@ -440,7 +448,9 @@ class Estado:
         if d < 1.5:
             return True
         fx, _, fz = direcao(self.giro)
-        return (dx * fx + dz * fz) / d > math.cos(VISAO_METADE)
+        if (dx * fx + dz * fz) / d <= math.cos(VISAO_METADE):
+            return False
+        return ve(self.mapa, self.olhos(), (x, y, z))
 
     def de_frente(self, x: float, z: float) -> bool:
         """Voce esta virado para (x, z)? So o angulo, a qualquer distancia."""
@@ -484,33 +494,61 @@ def _rumo(de: tuple[float, float], para: tuple[float, float]) -> float:
     return math.atan2(para[0] - de[0], para[1] - de[1])
 
 
-def colidir(x: float, z: float, obstaculos: Sequence[tuple[float, float, float]],
-            caixas: Sequence[tuple[float, float, float, float]] = (),
-            limites: tuple[float, float, float, float] = LIMITES) -> tuple[float, float]:
-    """Empurra o jogador (um circulo) para fora de cada obstaculo: circulos (x, z, raio) e
-    caixas (x0, z0, x1, z1)."""
-    for ox, oz, r in obstaculos:
-        dx, dz = x - ox, z - oz
-        d = math.hypot(dx, dz)
-        minimo = r + RAIO_JOGADOR
+_MOVIMENTO = ResultadoMovimento()  # reaproveitado todo quadro (o mover da engine nao aloca)
+
+
+def mover(mundo: MundoColisao3D | None, x: float, z: float, dx: float, dz: float,
+          extras: Sequence[tuple[float, float, float]] = (),
+          limites: tuple[float, float, float, float] = LIMITES) -> tuple[float, float]:
+    """Anda o jogador (a capsula em pe, `ALTURA_CORPO` x `RAIO_JOGADOR`) de (x, z) por (dx, dz):
+    desliza nos troncos e paredes do `MundoColisao3D` do mapa, depois sai de dentro dos
+    circulos `extras` (x, z, raio: o que se mexe e por isso nao mora no mundo -- a arvore que
+    anda, os jizos a mais, o Cego) e fica dentro dos `limites` (x0, x1, z0, z1)."""
+    if mundo is not None:
+        r = mundo.mover_capsula((x, 0.0, z), ALTURA_CORPO, RAIO_JOGADOR, (dx, 0.0, dz), CORPO, _MOVIMENTO, 0.0)
+        x, z = r.posicao[0], r.posicao[2]
+    else:
+        x, z = x + dx, z + dz
+    for ox, oz, raio in extras:
+        ex, ez = x - ox, z - oz
+        d = math.hypot(ex, ez)
+        minimo = raio + RAIO_JOGADOR
         if d < minimo:
             if d < 1e-6:
-                dx, dz, d = 1.0, 0.0, 1.0
-            x, z = ox + dx / d * minimo, oz + dz / d * minimo
-    for x0, z0, x1, z1 in caixas:
-        px, pz = min(max(x, x0), x1), min(max(z, z0), z1)  # o ponto da caixa mais perto
-        dx, dz = x - px, z - pz
-        d = math.hypot(dx, dz)
-        if d >= RAIO_JOGADOR:
-            continue
-        if d > 1e-6:
-            x, z = px + dx / d * RAIO_JOGADOR, pz + dz / d * RAIO_JOGADOR
-        else:  # o centro entrou na caixa: sai pela borda mais perto
-            saidas = [(x - x0, x0 - RAIO_JOGADOR, z), (x1 - x, x1 + RAIO_JOGADOR, z),
-                      (z - z0, x, z0 - RAIO_JOGADOR), (z1 - z, x, z1 + RAIO_JOGADOR)]
-            _, x, z = min(saidas)
+                ex, ez, d = 1.0, 0.0, 1.0
+            x, z = ox + ex / d * minimo, oz + ez / d * minimo
     lx0, lx1, lz0, lz1 = limites
     return min(max(x, lx0), lx1), min(max(z, lz0), lz1)
+
+
+def assentar(m: Mapa, x: float, z: float) -> tuple[float, float]:
+    """Onde o corpo fica se aparecer em (x, z): empurrado para fora do que e solido."""
+    lim = m.limite
+    return mover(m.mundo, x, z, 0.0, 0.0, (), (-lim, lim, -lim, lim))
+
+
+def livre(m: Mapa, x: float, z: float) -> bool:
+    """Cabe o corpo inteiro em (x, z) sem encostar em nada?"""
+    return m.mundo is None or not m.mundo.sobrepoe_capsula(Capsula.em_pe((x, 0.0, z), ALTURA_CORPO, RAIO_JOGADOR), CORPO)
+
+
+def ve(m: Mapa | None, de: tuple[float, float, float], para: tuple[float, float, float]) -> bool:
+    """Linha de visao de `de` ate `para` (o `tem_visao` do MundoColisao3D, camada `VISAO`):
+    troncos e paredes tapam; o que e baixo (pedra, mesa, tumulo) nao. Para `FOLGA_VISAO`
+    antes do alvo, para o colisor da propria coisa olhada (estatua, espantalho) nao esconde-la."""
+    if m is None or m.mundo is None:
+        return True
+    dx, dy, dz = para[0] - de[0], para[1] - de[1], para[2] - de[2]
+    d = math.sqrt(dx * dx + dy * dy + dz * dz)
+    if d <= FOLGA_VISAO:
+        return True
+    k = (d - FOLGA_VISAO) / d
+    return m.mundo.tem_visao(de, (de[0] + dx * k, de[1] + dy * k, de[2] + dz * k), VISAO, relevo=False)
+
+
+def vulto_te_ve(e: Estado) -> bool:
+    """Nada entre a cabeca dele e os seus olhos."""
+    return ve(e.mapa, (e.vulto[0], OLHOS_VULTO, e.vulto[1]), e.olhos())
 
 
 def atualizar(e: Estado, dt: float, frente: float, lado: float, girar: float, alternar_luz: bool,
@@ -665,10 +703,9 @@ def _andar(e: Estado, dt: float, frente: float, lado: float, soltar: bool, obsta
     dz = (fz * frente + fx * lado) * vel * dt
     if e.mapa is not None:
         lim = e.mapa.limite
-        x, z = colidir(e.x + dx, e.z + dz, list(obstaculos) + e.mapa.circulos_perto(e.x, e.z) + _obstaculos_vivos(e),
-                       e.mapa.caixas, (-lim, lim, -lim, lim))
+        x, z = mover(e.mapa.mundo, e.x, e.z, dx, dz, list(obstaculos) + _obstaculos_vivos(e), (-lim, lim, -lim, lim))
     else:
-        x, z = colidir(e.x + dx, e.z + dz, obstaculos)
+        x, z = mover(None, e.x, e.z, dx, dz, obstaculos)
     andou = math.hypot(x - e.x, z - e.z)
     e.passos += andou
     e.x, e.z = x, z
@@ -813,9 +850,9 @@ def _usar(e: Estado) -> bool:
         return True
     for nome, (x, z, *_) in e.mapa.esconderijos.items():
         if math.hypot(e.x - x, e.z - z) < ESCONDER:
+            viu = e.desde_pista < VIU_ENTRAR and e.dist_vulto() < VE_A_LUZ and vulto_te_ve(e)  # de onde voce entrou
             e.fora = (e.x, e.z)
             e.x, e.z, e.escondido = x, z, nome
-            viu = e.desde_pista < VIU_ENTRAR and e.dist_vulto() < VE_A_LUZ
             lembra = e.noite_n > 1 and nome in e.memoria.get("esconderijos", ())  # ele lembra da outra noite
             e.achado = viu or lembra
             usados = e.memoria.setdefault("esconderijos", [])
@@ -1020,8 +1057,7 @@ def _imitadora(e: Estado, dt: float) -> None:
             x, z = e.x + math.sin(a) * d, e.z - math.cos(a) * d
             lim = e.mapa.limite
             if abs(x) < lim and abs(z) < lim:
-                cx, cz = colidir(x, z, e.mapa.circulos_perto(x, z), e.mapa.caixas, (-lim, lim, -lim, lim))
-                if math.hypot(cx - x, cz - z) < 0.05:
+                if livre(e.mapa, x, z):
                     e.imitadora = [x, z, IMITA_VIDA]
                     e.espera_imita = e.rng.uniform(*IMITA_ESPERA)
                     e.eventos.append("imitadora")
@@ -1111,8 +1147,8 @@ def _soltou(e: Estado) -> None:
     fx, fz, rumo = e.fantoche
     d = math.hypot(e.x - fx, e.z - fz) or 1.0
     x, z = e.x + (e.x - fx) / d * SOLTOU_EMPURRA, e.z + (e.z - fz) / d * SOLTOU_EMPURRA
-    lim = e.mapa.limite
-    e.x, e.z = colidir(x, z, e.mapa.circulos_perto(x, z), e.mapa.caixas, (-lim, lim, -lim, lim))
+    lim = e.mapa.limite  # empurrado ate la, deslizando (nao atravessa parede)
+    e.x, e.z = mover(e.mapa.mundo, e.x, e.z, x - e.x, z - e.z, (), (-lim, lim, -lim, lim))
     e.fantoche_caida = FANTOCHE_CAIDA
     e.eventos.append("soltou")
 
@@ -1430,7 +1466,7 @@ def _saber(e: Estado, d: float, dt: float) -> None:
             if e.sem_pista > SEM_PISTA_MAX:  # ele vem conferir o esconderijo -- mas nao sabe se voce esta la
                 e.pista, e.sem_pista = (e.x, e.z), 0.0
         return
-    if (e.luz_ligada() and forca_da_luz(e) >= 0.3 and d < VE_A_LUZ) or d < SENTE:
+    if (e.luz_ligada() and forca_da_luz(e) >= 0.3 and d < VE_A_LUZ and vulto_te_ve(e)) or d < SENTE:
         _soube(e)
     elif e.pista is None:
         e.sem_pista += dt

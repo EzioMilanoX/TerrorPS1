@@ -17,7 +17,8 @@ from __future__ import annotations
 import math
 import random
 
-from terror_ps1.malhas import Tri, bloco, chao, icosaedro
+from ouroboros.interfaces.malhas3d import Malha, bloco, esfera, juntar, plano
+
 from terror_ps1.mapa import MADEIRA, Mapa, P, _pinheiro, dist_segmento
 
 TAMANHO = 40.0
@@ -72,7 +73,7 @@ def gerar_mapa(semente: int = 53) -> Mapa:
         if not _livre(x, z) or any(math.hypot(x - a, z - b) < 1.4 for a, b, _ in m.pedras):
             continue
         m.pedras.append((x, z, rng.randrange(2, 7)))  # x, z, quantas pedras
-        m.circulos.append((x, z, 0.28))
+        m.circulos.append((x, z, 0.28, 0.8))  # a torre de pedrinhas: baixa, nao tapa a visao
     for rx, rz in rochas():
         m.circulos.append((rx, rz, 1.0))
     m.circulos.append((JIZO[0], JIZO[1], 0.9))
@@ -86,7 +87,7 @@ def gerar_mapa(semente: int = 53) -> Mapa:
     m.bilhetes += [(x, z, 0.0, t) for (x, z), t in TEXTOS]
     m.luzes = [((JIZO[0] - 0.8, 0.3, JIZO[1] + 0.9), (1.2, 0.7, 0.3), 3.0),  # as velas aos pes do Jizo
                ((0.0, 0.4, -24.0), (0.4, 0.5, 0.8), 9.0)]  # o rio, claro de lua
-    m.montar_grade()
+    m.montar_colisao()
     return m
 
 
@@ -95,44 +96,44 @@ def gerar_mapa(semente: int = 53) -> Mapa:
 SEIXO, AGUA_RASA, AGUA_FUNDA = (96, 96, 98), (40, 52, 66), (18, 24, 36)
 
 
-def _torre(x, z, n, rng) -> list[Tri]:
-    t, y, larg = [], 0.0, 0.34
+def _torre(x, z, n, rng) -> Malha:
+    partes, y, larg = [], 0.0, 0.34
     for _ in range(int(n)):
         alto = rng.uniform(0.09, 0.14)
         tom = rng.randint(-14, 14)
-        t += bloco((x + rng.uniform(-0.03, 0.03), y, z), y + alto, larg, larg * 0.9, larg * 0.9,
-                   (110 + tom, 108 + tom, 104 + tom))
+        partes.append(bloco((x + rng.uniform(-0.03, 0.03), y, z), y + alto, larg, larg * 0.9, larg * 0.9,
+                            (110 + tom, 108 + tom, 104 + tom)))
         y += alto
         larg *= 0.82
-    return t
+    return juntar(*partes)
 
 
-def _jizo() -> list[Tri]:
+def _jizo() -> Malha:
     x, z = JIZO
-    t = bloco((x, 0, z), 0.5, 1.6, 1.6, 1.4, (80, 80, 82))  # a base
-    t += bloco((x, 0.5, z), 2.4, 1.0, 0.8, 0.8, (120, 118, 112))  # o corpo
-    t += icosaedro((x, 2.75, z), 0.42, (126, 124, 118))  # a cabeca
-    t += bloco((x, 1.6, z + 0.42), 2.2, 0.9, 0.8, 0.06, (170, 40, 34))  # o babador
+    partes = [bloco((x, 0, z), 0.5, 1.6, 1.6, 1.4, (80, 80, 82)),  # a base
+              bloco((x, 0.5, z), 2.4, 1.0, 0.8, 0.8, (120, 118, 112)),  # o corpo
+              esfera((x, 2.75, z), 0.42, (126, 124, 118), subdivisoes=0),  # a cabeca
+              bloco((x, 1.6, z + 0.42), 2.2, 0.9, 0.8, 0.06, (170, 40, 34))]  # o babador
     for k in range(5):  # as velas
-        t += bloco((x - 1.0 + k * 0.5, 0.0, z + 1.0), 0.25, 0.05, 0.05, 0.05, (220, 214, 190))
-        t += bloco((x - 1.0 + k * 0.5, 0.25, z + 1.0), 0.29, 0.02, 0.02, 0.02, (255, 190, 90), emissivo=True)
-    return t
+        partes.append(bloco((x - 1.0 + k * 0.5, 0.0, z + 1.0), 0.25, 0.05, 0.05, 0.05, (220, 214, 190)))
+        partes.append(bloco((x - 1.0 + k * 0.5, 0.25, z + 1.0), 0.29, 0.02, 0.02, 0.02, (255, 190, 90), emissivo=True))
+    return juntar(*partes)
 
 
-def _cata_ventos(rng) -> list[Tri]:
-    t = []
+def _cata_ventos(rng) -> Malha:
+    partes = []
     for k in range(14):  # espetados na terra em volta do Jizo
         a = k / 14 * 2 * math.pi
         x, z = JIZO[0] + math.cos(a) * rng.uniform(2.0, 3.2), JIZO[1] + math.sin(a) * rng.uniform(2.0, 3.2)
         if z < RASO + 0.4:
             continue
-        t += bloco((x, 0, z), 0.8, 0.02, 0.02, 0.02, MADEIRA)
+        partes.append(bloco((x, 0, z), 0.8, 0.02, 0.02, 0.02, MADEIRA))
         cor = rng.choice(((200, 50, 50), (220, 200, 80), (80, 140, 200), (220, 130, 170)))
-        t += bloco((x, 0.7, z), 0.92, 0.22, 0.22, 0.02, cor, rng.uniform(0, 1.5), (x, 0.81, z))
-    return t
+        partes.append(bloco((x, 0.7, z), 0.92, 0.22, 0.22, 0.02, cor).girada("z", rng.uniform(0, 1.5), (x, 0.81, z)))
+    return juntar(*partes)
 
 
-def geometria(m: Mapa) -> list[Tri]:
+def geometria(m: Mapa) -> Malha:
     rng = random.Random(5)
 
     def cor(x, z):
@@ -145,17 +146,13 @@ def geometria(m: Mapa) -> list[Tri]:
             return (int(84 + tom), int(82 + tom), int(78 + tom))
         return (int(SEIXO[0] + tom), int(SEIXO[1] + tom), int(SEIXO[2] + tom))
 
-    tris = chao(-TAMANHO - 4, TAMANHO + 4, -TAMANHO - 4, TAMANHO + 4, 1.0, cor)
-    for x, z, alto, _ in m.arvores:
-        tris += _pinheiro(x, z, alto, (40, 42, 44))
+    partes = [plano(-TAMANHO - 4, TAMANHO + 4, -TAMANHO - 4, TAMANHO + 4, cor, passo=1.0)]
+    partes += [_pinheiro(x, z, alto, (40, 42, 44)) for x, z, alto, _ in m.arvores]
     rt = random.Random(7)
-    for x, z, n in m.pedras:
-        tris += _torre(x, z, n, rt)
-    for rx, rz in rochas():  # as pedras grandes
-        tris += icosaedro((rx, 0.55, rz), 1.0, (88, 90, 92))
-    tris += _jizo() + _cata_ventos(random.Random(3))
-    tris += bloco((INICIO[0] + 1.5, 0, INICIO[1] - 1.0), 1.3, 0.1, 0.1, 0.1, MADEIRA)
-    tris += bloco((INICIO[0] + 1.5, 1.0, INICIO[1] - 1.0), 1.35, 0.8, 0.8, 0.05, MADEIRA)
-    for x, z, _, _ in m.bilhetes:
-        tris += bloco((x, 0.02, z), 0.032, 0.22, 0.22, 0.3, (196, 188, 168))
-    return tris
+    partes += [_torre(x, z, n, rt) for x, z, n in m.pedras]
+    partes += [esfera((rx, 0.55, rz), 1.0, (88, 90, 92), subdivisoes=0) for rx, rz in rochas()]  # as pedras grandes
+    partes += [_jizo(), _cata_ventos(random.Random(3)),
+               bloco((INICIO[0] + 1.5, 0, INICIO[1] - 1.0), 1.3, 0.1, 0.1, 0.1, MADEIRA),
+               bloco((INICIO[0] + 1.5, 1.0, INICIO[1] - 1.0), 1.35, 0.8, 0.8, 0.05, MADEIRA)]
+    partes += [bloco((x, 0.02, z), 0.032, 0.22, 0.22, 0.3, (196, 188, 168)) for x, z, _, _ in m.bilhetes]
+    return juntar(*partes)

@@ -16,7 +16,9 @@ from __future__ import annotations
 import math
 import random
 
-from terror_ps1.malhas import Tri, bloco, chao, lanterna, torii
+from ouroboros.interfaces.malhas3d import Malha, bloco, juntar, plano
+
+from terror_ps1.malhas import lanterna, torii
 from terror_ps1.mapa import MADEIRA, MADEIRA_ESCURA, PEDRA, Mapa, P, _pinheiro, dist_segmento
 
 TAMANHO = 40.0
@@ -128,7 +130,7 @@ def gerar_mapa(semente: int = 31) -> Mapa:
                ((-19.5, 2.4, -9.0), (0.7, 0.75, 0.9), 2.8),  # a lampada da enfermaria, quase morta
                ((-17.5, 2.6, 15.4), (1.0, 0.7, 0.35), 3.5),  # a lampada da porta do ginasio
                ((-1.0, 1.0, -31.6), (1.5, 0.3, 0.15), 3.0)]  # o santuario
-    m.montar_grade()
+    m.montar_colisao()
     return m
 
 
@@ -137,15 +139,16 @@ def _colisao(m: Mapa) -> None:
     for x0, z0, x1, z1 in PAREDES:
         m.caixas.append((min(x0, x1) - e, min(z0, z1) - e, max(x0, x1) + e, max(z0, z1) + e))
     m.caixas += [(-3.6, -9.5, -1.8, -6.0), (1.8, -9.5, 3.6, -6.0)]  # as sapateiras, dos dois lados do saguao
-    m.caixas += [(-33.5, 30.3, -2.5, 30.7), (2.5, 30.3, 33.5, 30.7)]  # o muro baixo (o portao no meio)
+    # o que e baixo (muro, carteiras, mesas, camas, a borda da piscina) segura, mas nao tapa a visao
+    m.caixas += [(-33.5, 30.3, -2.5, 30.7, 1.0), (2.5, 30.3, 33.5, 30.7, 1.0)]  # o muro baixo (o portao no meio)
     for cx, cz in _carteiras():
-        m.circulos.append((cx, cz, 0.38))
-    m.caixas += [(-9.6, -11.4, -7.4, -10.9), (7.4, -11.4, 9.6, -10.9)]  # as mesas do professor
-    m.caixas.append((-23.5, -11.6, -21.5, -10.4))  # a cama da enfermaria
-    m.caixas.append((-17.5, -11.6, -15.5, -10.4))
+        m.circulos.append((cx, cz, 0.38, 0.7))
+    m.caixas += [(-9.6, -11.4, -7.4, -10.9, 0.78), (7.4, -11.4, 9.6, -10.9, 0.78)]  # as mesas do professor
+    m.caixas.append((-23.5, -11.6, -21.5, -10.4, 0.55))  # a cama da enfermaria
+    m.caixas.append((-17.5, -11.6, -15.5, -10.4, 0.55))
     m.caixas.append((21.6, -11.8, 24.4, -11.2))  # o piano
     m.caixas.append(GINASIO)
-    m.caixas.append(PISCINA)
+    m.caixas.append((*PISCINA, 0.35))
     cx, cz = MARCOS["coelheira"]
     m.caixas.append((cx + 1.0, cz - 2.2, cx + 3.4, cz + 0.6))
     m.circulos += [(-21.0, 28.4, 0.2), (-17.0, 28.4, 0.2)]  # o balanco
@@ -172,112 +175,106 @@ def _carteiras() -> list[P]:
 TABUA, TABUA_CLARA, VIDRO, LOUSA = (92, 70, 52), (120, 96, 70), (16, 20, 26), (30, 52, 40)
 
 
-def _parede(x0, z0, x1, z1, base=0.0, topo=ALTO, cor=TABUA) -> list[Tri]:
+def _parede(x0, z0, x1, z1, base=0.0, topo=ALTO, cor=TABUA) -> Malha:
     e = PAREDE
     return bloco(((x0 + x1) / 2, base, (z0 + z1) / 2), topo, abs(x1 - x0) + e, abs(x1 - x0) + e,
                  abs(z1 - z0) + e, cor)
 
 
-def _predio() -> list[Tri]:
-    t: list[Tri] = []
-    for x0, z0, x1, z1 in PAREDES:
-        t += _parede(x0, z0, x1, z1)
+def _predio() -> Malha:
+    partes = [_parede(x0, z0, x1, z1) for x0, z0, x1, z1 in PAREDES]
     x0, z0, x1, z1 = PREDIO
-    t += bloco(((x0 + x1) / 2, ALTO, (z0 + z1) / 2), ALTO + 0.25, x1 - x0 + 0.6, x1 - x0 + 0.6, z1 - z0 + 0.6,
-               (40, 34, 30))  # o teto do terreo (e o chao do andar de cima)
-    for zz in (z0, z1):  # o andar de cima, so por fora: as paredes e as janelas escuras
-        t += _parede(x0, zz, x1, zz, ALTO + 0.25, 6.0, TABUA_CLARA)
-    for xx in (x0, x1):
-        t += _parede(xx, z0, xx, z1, ALTO + 0.25, 6.0, TABUA_CLARA)
-    t += bloco((0.0, 6.0, (z0 + z1) / 2), 7.2, x1 - x0 + 1.6, x1 - x0 - 2.0, z1 - z0 + 1.6, (44, 46, 52))  # o telhado
+    partes.append(bloco(((x0 + x1) / 2, ALTO, (z0 + z1) / 2), ALTO + 0.25, x1 - x0 + 0.6, x1 - x0 + 0.6, z1 - z0 + 0.6,
+                        (40, 34, 30)))  # o teto do terreo (e o chao do andar de cima)
+    partes += [_parede(x0, zz, x1, zz, ALTO + 0.25, 6.0, TABUA_CLARA) for zz in (z0, z1)]  # o andar de cima, so por fora
+    partes += [_parede(xx, z0, xx, z1, ALTO + 0.25, 6.0, TABUA_CLARA) for xx in (x0, x1)]
+    partes.append(bloco((0.0, 6.0, (z0 + z1) / 2), 7.2, x1 - x0 + 1.6, x1 - x0 - 2.0, z1 - z0 + 1.6, (44, 46, 52)))  # o telhado
     for k in range(12):  # as janelas da frente, nos dois andares
         x = x0 + 2.2 + k * 4.3
         if all(abs(x - p) > 2.2 for p in (-20.0, 0.0, 20.0)):  # nao em cima das portas
-            t += bloco((x, 1.1, z1), 2.3, 2.2, 2.2, PAREDE + 0.06, VIDRO)
-        t += bloco((x, 4.0, z1), 5.3, 2.2, 2.2, PAREDE + 0.06, VIDRO)
-    t += bloco((0.0, 6.2, z1 + 0.25), 7.0, 1.4, 1.4, 0.2, (210, 206, 196))  # o relogio parado
-    t += bloco((0.0, 6.6, z1 + 0.37), 6.62, 0.05, 0.05, 0.04, (20, 20, 20), 0.8, (0.0, 6.6, z1 + 0.37))
-    return t
+            partes.append(bloco((x, 1.1, z1), 2.3, 2.2, 2.2, PAREDE + 0.06, VIDRO))
+        partes.append(bloco((x, 4.0, z1), 5.3, 2.2, 2.2, PAREDE + 0.06, VIDRO))
+    partes.append(bloco((0.0, 6.2, z1 + 0.25), 7.0, 1.4, 1.4, 0.2, (210, 206, 196)))  # o relogio parado
+    partes.append(bloco((0.0, 6.6, z1 + 0.37), 6.62, 0.05, 0.05, 0.04, (20, 20, 20)).girada("z", 0.8, (0.0, 6.6, z1 + 0.37)))
+    return juntar(*partes)
 
 
-def _salas() -> list[Tri]:
-    t: list[Tri] = []
+def _salas() -> Malha:
+    partes = []
     for cx, cz in _carteiras():
-        t += bloco((cx, 0, cz), 0.7, 0.6, 0.6, 0.45, TABUA_CLARA)
-        t += bloco((cx, 0, cz + 0.45), 0.42, 0.36, 0.36, 0.34, MADEIRA_ESCURA)  # a cadeira
+        partes.append(bloco((cx, 0, cz), 0.7, 0.6, 0.6, 0.45, TABUA_CLARA))
+        partes.append(bloco((cx, 0, cz + 0.45), 0.42, 0.36, 0.36, 0.34, MADEIRA_ESCURA))  # a cadeira
     for cx in (-8.5, 8.5):  # a lousa e a mesa do professor
-        t += bloco((cx, 0.9, -11.82), 2.3, 4.0, 4.0, 0.06, LOUSA)
-        t += bloco((cx, 0, -11.15), 0.78, 2.2, 2.2, 0.5, MADEIRA)
-    t += bloco((8.5, 1.4, -11.78), 1.5, 0.9, 0.9, 0.03, (220, 220, 210))  # giz: "quem me procura?"
-    for k in range(7):  # os desenhos na parede do corredor da 2-1
-        t += bloco((5.0 + k * 0.6, 1.3, -5.2), 1.75, 0.45, 0.45, 0.03, (200 - k * 9, 190, 170 + k * 6))
-    t += bloco((9.2, 1.3, -5.2), 1.75, 0.45, 0.45, 0.03, (120, 40, 40))  # o dela, com o resto em branco
+        partes.append(bloco((cx, 0.9, -11.82), 2.3, 4.0, 4.0, 0.06, LOUSA))
+        partes.append(bloco((cx, 0, -11.15), 0.78, 2.2, 2.2, 0.5, MADEIRA))
+    partes.append(bloco((8.5, 1.4, -11.78), 1.5, 0.9, 0.9, 0.03, (220, 220, 210)))  # giz: "quem me procura?"
+    partes += [bloco((5.0 + k * 0.6, 1.3, -5.2), 1.75, 0.45, 0.45, 0.03, (200 - k * 9, 190, 170 + k * 6))  # os desenhos
+               for k in range(7)]
+    partes.append(bloco((9.2, 1.3, -5.2), 1.75, 0.45, 0.45, 0.03, (120, 40, 40)))  # o dela, com o resto em branco
     for bx in (-22.5, -16.5):  # a enfermaria: as camas e a cortina
-        t += bloco((bx, 0, -11.0), 0.55, 2.0, 2.0, 1.2, (200, 200, 196))
-        t += bloco((bx + 1.3, 0, -10.4), 2.2, 0.04, 0.04, 2.4, (170, 190, 186))
-    t += bloco((-19.5, 2.55, -9.0), 2.62, 0.4, 0.4, 0.15, (160, 170, 190), emissivo=True)  # a lampada fraca
-    t += bloco((23.0, 0, -11.5), 1.1, 2.8, 2.8, 0.6, (12, 12, 14))  # o piano
-    t += bloco((23.0, 1.1, -11.7), 1.6, 2.6, 2.6, 0.12, (12, 12, 14))
-    t += bloco((23.0, 0.8, -11.18), 0.84, 2.4, 2.4, 0.12, (220, 216, 206))  # as teclas
+        partes.append(bloco((bx, 0, -11.0), 0.55, 2.0, 2.0, 1.2, (200, 200, 196)))
+        partes.append(bloco((bx + 1.3, 0, -10.4), 2.2, 0.04, 0.04, 2.4, (170, 190, 186)))
+    partes += [bloco((-19.5, 2.55, -9.0), 2.62, 0.4, 0.4, 0.15, (160, 170, 190), emissivo=True),  # a lampada fraca
+               bloco((23.0, 0, -11.5), 1.1, 2.8, 2.8, 0.6, (12, 12, 14)),  # o piano
+               bloco((23.0, 1.1, -11.7), 1.6, 2.6, 2.6, 0.12, (12, 12, 14)),
+               bloco((23.0, 0.8, -11.18), 0.84, 2.4, 2.4, 0.12, (220, 216, 206))]  # as teclas
     for lado in (-1, 1):  # as sapateiras do saguao
         x = lado * 2.7
-        t += bloco((x, 0, -7.75), 1.8, 1.8, 1.8, 3.5, (110, 90, 66))
-        for j in range(5):
-            for k in range(4):
-                t += bloco((x - lado * 0.92, 0.2 + k * 0.4, -9.2 + j * 0.7), 0.5 + k * 0.4, 0.04, 0.04, 0.6,
-                           (40, 30, 24))
-    t += bloco((-24.6, 0, -2.6), 2.2, 1.0, 1.0, 0.04, MADEIRA_ESCURA)  # a porta do armario de limpeza
-    t += bloco((0.0, 2.45, -2.35), 2.7, 0.8, 0.8, 0.08, (60, 220, 90), emissivo=True)  # SAIDA
-    return t
+        partes.append(bloco((x, 0, -7.75), 1.8, 1.8, 1.8, 3.5, (110, 90, 66)))
+        partes += [bloco((x - lado * 0.92, 0.2 + k * 0.4, -9.2 + j * 0.7), 0.5 + k * 0.4, 0.04, 0.04, 0.6, (40, 30, 24))
+                   for j in range(5) for k in range(4)]
+    partes.append(bloco((-24.6, 0, -2.6), 2.2, 1.0, 1.0, 0.04, MADEIRA_ESCURA))  # a porta do armario de limpeza
+    partes.append(bloco((0.0, 2.45, -2.35), 2.7, 0.8, 0.8, 0.08, (60, 220, 90), emissivo=True))  # SAIDA
+    return juntar(*partes)
 
 
-def _ginasio() -> list[Tri]:
+def _ginasio() -> Malha:
     x0, z0, x1, z1 = GINASIO
-    t = bloco(((x0 + x1) / 2, 0, (z0 + z1) / 2), 6.5, x1 - x0, x1 - x0, z1 - z0, (130, 126, 118))
-    t += bloco(((x0 + x1) / 2, 6.5, (z0 + z1) / 2), 8.0, x1 - x0 + 0.8, 1.0, z1 - z0 + 0.8, (60, 70, 80))
-    t += bloco((x1 + 0.02, 0, 16.0), 2.4, 0.06, 0.06, 2.0, (30, 28, 26))  # a porta, trancada
-    return t + bloco((x1 + 0.1, 2.5, 15.4), 2.75, 0.06, 0.06, 0.3, (255, 200, 120), emissivo=True)
+    return juntar(bloco(((x0 + x1) / 2, 0, (z0 + z1) / 2), 6.5, x1 - x0, x1 - x0, z1 - z0, (130, 126, 118)),
+                  bloco(((x0 + x1) / 2, 6.5, (z0 + z1) / 2), 8.0, x1 - x0 + 0.8, 1.0, z1 - z0 + 0.8, (60, 70, 80)),
+                  bloco((x1 + 0.02, 0, 16.0), 2.4, 0.06, 0.06, 2.0, (30, 28, 26)),  # a porta, trancada
+                  bloco((x1 + 0.1, 2.5, 15.4), 2.75, 0.06, 0.06, 0.3, (255, 200, 120), emissivo=True))
 
 
-def _piscina() -> list[Tri]:
+def _piscina() -> Malha:
     x0, z0, x1, z1 = PISCINA
-    t = bloco(((x0 + x1) / 2, -0.01, (z0 + z1) / 2), 0.02, x1 - x0, x1 - x0, z1 - z0, (40, 60, 70))  # o fundo
-    for a, b, c, d in ((x0, z0, x1, z0), (x0, z1, x1, z1), (x0, z0, x0, z1), (x1, z0, x1, z1)):
-        t += _parede(a, b, c, d, 0.0, 0.35, (180, 186, 186))  # a borda
-    t += bloco(((x0 + x1) / 2, 0.0, (z0 + z1) / 2), 0.03, x1 - x0 - 1.0, x1 - x0 - 1.0, z1 - z0 - 1.0,
-               (24, 44, 52))  # o que sobrou da agua, preta
-    for k in range(9):  # a cerca
-        t += bloco((x0 - 0.8, 0, z0 - 0.6 + k * 1.3), 1.6, 0.06, 0.06, 0.06, (70, 74, 70))
-    t += bloco((x0 - 0.8, 1.5, (z0 + z1) / 2 - 1.0), 1.56, 0.04, 0.04, 9.0, (70, 74, 70))
-    return t + bloco((x0 + 1.2, 0.35, z0 + 0.6), 0.37, 0.4, 0.4, 0.15, (220, 200, 90))  # a lanterna dela, la
+    partes = [bloco(((x0 + x1) / 2, -0.01, (z0 + z1) / 2), 0.02, x1 - x0, x1 - x0, z1 - z0, (40, 60, 70))]  # o fundo
+    partes += [_parede(a, b, c, d, 0.0, 0.35, (180, 186, 186))  # a borda
+               for a, b, c, d in ((x0, z0, x1, z0), (x0, z1, x1, z1), (x0, z0, x0, z1), (x1, z0, x1, z1))]
+    partes.append(bloco(((x0 + x1) / 2, 0.0, (z0 + z1) / 2), 0.03, x1 - x0 - 1.0, x1 - x0 - 1.0, z1 - z0 - 1.0,
+                        (24, 44, 52)))  # o que sobrou da agua, preta
+    partes += [bloco((x0 - 0.8, 0, z0 - 0.6 + k * 1.3), 1.6, 0.06, 0.06, 0.06, (70, 74, 70)) for k in range(9)]  # a cerca
+    partes.append(bloco((x0 - 0.8, 1.5, (z0 + z1) / 2 - 1.0), 1.56, 0.04, 0.04, 9.0, (70, 74, 70)))
+    partes.append(bloco((x0 + 1.2, 0.35, z0 + 0.6), 0.37, 0.4, 0.4, 0.15, (220, 200, 90)))  # a lanterna dela, la
+    return juntar(*partes)
 
 
-def _coelheira() -> list[Tri]:
+def _coelheira() -> Malha:
     cx, cz = MARCOS["coelheira"]
-    t = bloco((cx + 2.2, 0, cz - 0.8), 1.6, 2.4, 2.4, 2.8, (60, 52, 44))
-    t += bloco((cx + 0.99, 0.2, cz - 0.8), 1.4, 0.04, 0.04, 2.4, (90, 96, 96))  # a tela
-    return t + bloco((cx + 2.2, 1.6, cz - 0.8), 1.8, 2.8, 2.6, 3.2, (50, 42, 36))
+    return juntar(bloco((cx + 2.2, 0, cz - 0.8), 1.6, 2.4, 2.4, 2.8, (60, 52, 44)),
+                  bloco((cx + 0.99, 0.2, cz - 0.8), 1.4, 0.04, 0.04, 2.4, (90, 96, 96)),  # a tela
+                  bloco((cx + 2.2, 1.6, cz - 0.8), 1.8, 2.8, 2.6, 3.2, (50, 42, 36)))
 
 
-def _balanco() -> list[Tri]:
-    t = bloco((-21.0, 0, 28.4), 2.6, 0.12, 0.12, 0.12, (70, 70, 74)) + bloco((-17.0, 0, 28.4), 2.6, 0.12, 0.12,
-                                                                           0.12, (70, 70, 74))
-    t += bloco((-19.0, 2.5, 28.4), 2.62, 4.2, 4.2, 0.12, (70, 70, 74))
+def _balanco() -> Malha:
+    partes = [bloco((-21.0, 0, 28.4), 2.6, 0.12, 0.12, 0.12, (70, 70, 74)), bloco((-17.0, 0, 28.4), 2.6, 0.12, 0.12, 0.12,
+                                                                                   (70, 70, 74)),
+              bloco((-19.0, 2.5, 28.4), 2.62, 4.2, 4.2, 0.12, (70, 70, 74))]
     for x in (-20.0, -18.0):
-        t += bloco((x, 0.5, 28.4), 2.5, 0.02, 0.02, 0.02, (50, 50, 50))
-        t += bloco((x, 0.45, 28.4), 0.52, 0.5, 0.5, 0.25, MADEIRA)
-    return t
+        partes.append(bloco((x, 0.5, 28.4), 2.5, 0.02, 0.02, 0.02, (50, 50, 50)))
+        partes.append(bloco((x, 0.45, 28.4), 0.52, 0.5, 0.5, 0.25, MADEIRA))
+    return juntar(*partes)
 
 
-def _santuario() -> list[Tri]:
+def _santuario() -> Malha:
     sx, sz = SANTUARIO
-    t = torii(sx, sz + 1.5, (100, 30, 26), (64, 20, 18))
-    t += lanterna(sx - 1.6, sz + 0.2, (110, 108, 104), (255, 70, 40))
-    t += bloco((sx, 0, sz - 3.3), 1.4, 1.8, 1.8, 1.3, MADEIRA_ESCURA)
-    return t + bloco((sx, 1.4, sz - 3.3), 2.0, 2.4, 0.2, 1.9, (40, 30, 28))
+    return juntar(torii(sx, sz + 1.5, (100, 30, 26), (64, 20, 18)),
+                  lanterna(sx - 1.6, sz + 0.2, (110, 108, 104), (255, 70, 40)),
+                  bloco((sx, 0, sz - 3.3), 1.4, 1.8, 1.8, 1.3, MADEIRA_ESCURA),
+                  bloco((sx, 1.4, sz - 3.3), 2.0, 2.4, 0.2, 1.9, (40, 30, 28)))
 
 
-def geometria(m: Mapa) -> list[Tri]:
+def geometria(m: Mapa) -> Malha:
     rng = random.Random(6)
 
     def cor(x, z):
@@ -290,15 +287,13 @@ def geometria(m: Mapa) -> list[Tri]:
             return (int(70 + tom), int(66 + tom), int(58 + tom))
         return (int(36 + tom), int(44 + tom), int(34 + tom))
 
-    tris = chao(-TAMANHO - 4, TAMANHO + 4, -TAMANHO - 4, TAMANHO + 4, 1.0, cor)
-    for x, z, alto, _ in m.arvores:
-        tris += _pinheiro(x, z, alto, (26, 36, 30))
-    tris += _predio() + _salas() + _ginasio() + _piscina() + _coelheira() + _balanco() + _santuario()
+    partes = [plano(-TAMANHO - 4, TAMANHO + 4, -TAMANHO - 4, TAMANHO + 4, cor, passo=1.0)]
+    partes += [_pinheiro(x, z, alto, (26, 36, 30)) for x, z, alto, _ in m.arvores]
+    partes += [_predio(), _salas(), _ginasio(), _piscina(), _coelheira(), _balanco(), _santuario()]
     for lado in (-1, 1):  # o portao da escola e o muro baixo
-        tris += bloco((lado * 2.2, 0, 30.5), 2.0, 0.6, 0.6, 0.6, PEDRA)
-        tris += bloco((lado * 18.0, 0, 30.5), 1.0, 31.0, 31.0, 0.4, PEDRA)
-    tris += bloco((INICIO[0] + 1.5, 0, INICIO[1] - 1.0), 1.3, 0.1, 0.1, 0.1, MADEIRA)
-    tris += bloco((INICIO[0] + 1.5, 1.0, INICIO[1] - 1.0), 1.35, 0.8, 0.8, 0.05, MADEIRA)
-    for x, z, _, _ in m.bilhetes:
-        tris += bloco((x, 0.02, z), 0.032, 0.22, 0.22, 0.3, (196, 188, 168))
-    return tris
+        partes.append(bloco((lado * 2.2, 0, 30.5), 2.0, 0.6, 0.6, 0.6, PEDRA))
+        partes.append(bloco((lado * 18.0, 0, 30.5), 1.0, 31.0, 31.0, 0.4, PEDRA))
+    partes += [bloco((INICIO[0] + 1.5, 0, INICIO[1] - 1.0), 1.3, 0.1, 0.1, 0.1, MADEIRA),
+               bloco((INICIO[0] + 1.5, 1.0, INICIO[1] - 1.0), 1.35, 0.8, 0.8, 0.05, MADEIRA)]
+    partes += [bloco((x, 0.02, z), 0.032, 0.22, 0.22, 0.3, (196, 188, 168)) for x, z, _, _ in m.bilhetes]
+    return juntar(*partes)
