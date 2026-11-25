@@ -28,5 +28,7 @@
 - OuroborosEngine com `ouroboros.core.colisao3d` e `ouroboros.interfaces.malhas3d` (engine
   0.4.0 ou mais nova).
 
-## 0.9.0 (2026-11-12)
+## 0.3.0 (2026-11-12)
+
+Publicada como v0.9.0 e renumerada em 2026-11-25 para seguir a sequência (a v0.7.0 virou v0.2.0).
 Sete noites, a roda, o rio secreto e o pesadelo (ver `CLAUDE.md` e `HISTORIA.md`).

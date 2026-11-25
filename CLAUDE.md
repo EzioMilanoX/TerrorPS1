@@ -120,7 +120,7 @@ Inspirado (sem copiar) na Chimera do mod Hypno's Lullaby.
 - Sem saída: quando ela acorda na campanha, `progresso.trancar(noite)`; ESC não sai (dev sai) e
   `composition.build_game` abre direto na noite trancada. `_concluiu` destranca.
 
-## A história (v0.9, 2026-11-12)
+## A história (v0.3.0, 2026-11-12)
 - **`HISTORIA.md` é a bíblia**: 7 noites + 1 secreta (Sai no Kawara), monstros = os sete da aldeia
   (Shichinin Misaki), roda Kagome na 7ª, final falso / verdadeiro, o modo pesadelo e as etapas.
   Texto novo (verdades, diário, bilhetes) segue ela.

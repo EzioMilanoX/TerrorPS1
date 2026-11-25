@@ -58,8 +58,8 @@ outro). Os pares e o porquê estão em `mapa.PARES` / `mapa.PARES_TEXTO`; na rod
 ## Etapas
 
 1. História: esta bíblia, verdades, diário; a floresta só com o vulto; guardar se o 8º foi
-   levado em alguma noite da campanha. **(feito, v0.9)**
-2. Noite 6: a escola e a Pequena (ela vem para a luz). **(feito, v0.9)**
-3. Noite 7: a roda (Kagome) e o final falso. **(feito, v0.9)**
-4. Noite 8: Sai no Kawara e o final verdadeiro. **(feito, v0.9)**
-5. O pesadelo (espelhado, fogo, pares). **(feito, v0.9)**
+   levado em alguma noite da campanha. **(feito, v0.3.0)**
+2. Noite 6: a escola e a Pequena (ela vem para a luz). **(feito, v0.3.0)**
+3. Noite 7: a roda (Kagome) e o final falso. **(feito, v0.3.0)**
+4. Noite 8: Sai no Kawara e o final verdadeiro. **(feito, v0.3.0)**
+5. O pesadelo (espelhado, fogo, pares). **(feito, v0.3.0)**
