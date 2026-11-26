@@ -1,6 +1,6 @@
 [project]
 name = "terror-ps1"
-version = "0.3.0"
+version = "0.4.0"
 description = "Terror em primeira pessoa numa floresta low poly estilo PS1: o vulto so anda no escuro."
 requires-python = ">=3.11"
 license = { text = "MPL-2.0" }
@@ -10,7 +10,7 @@ dependencies = [
     "moderngl>=5.10",
     # a engine ECS compartilhada (repo irmao; em dev: pip install -e ../OuroborosEngine). Precisa da
     # engine com `ouroboros.core.colisao3d` e `ouroboros.interfaces.malhas3d` (engine 0.4.0 ou mais nova)
-    "ouroboros-engine @ git+https://github.com/EzioMilanoX/OuroborosEngine.git",
+    "ouroboros-engine @ git+https://github.com/EzioMilanoX/OuroborosEngine.git@v0.5.0",
 ]
 
 [project.optional-dependencies]

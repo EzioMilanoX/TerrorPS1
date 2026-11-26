@@ -1,6 +1,6 @@
 # Changelog — Terror PS1
 
-## Ainda sem versão
+## 0.4.0 (2026-11-26)
 
 ### Mudou
 - **Malhas da engine.** `terror_ps1/malhas.py` deixou de ser a cópia dos construtores da vitrine:
